@@ -4,6 +4,7 @@ import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { decodeTokenPayload } from "@/lib/token-client";
 import Link from "next/link";
+import BracketView from "@/components/BracketView";
 
 type Item = { id: string; name: string; seed: number };
 type Slot = { id: string; itemId: string; position: number };
@@ -89,112 +90,83 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   const itemMap = Object.fromEntries(state.items.map((it) => [it.id, it]));
   const activeRound = state.rounds.find((r) => r.status === "ACTIVE");
-  const completedRounds = state.rounds.filter((r) => r.status === "COMPLETE");
 
   return (
     <main className="flex min-h-screen flex-col items-center p-6 pt-12">
-      <div className="w-full max-w-lg space-y-6">
+      <div className="w-full max-w-5xl space-y-6">
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs font-mono tracking-widest text-zinc-400">{code}</p>
             <h1 className="mt-1 text-2xl font-bold">{state.tournament.name}</h1>
+            <p className="text-sm text-zinc-500">Click the winner of each match</p>
           </div>
           <Link
             href={`/tournament/${code}/results`}
             className="text-sm text-zinc-400 hover:text-zinc-700"
           >
-            Leaderboard →
+            Scores →
           </Link>
         </div>
 
+        {/* Current round: card-based resolver */}
         {activeRound && (
           <div className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Round {activeRound.roundNumber} — Active
+              Round {activeRound.roundNumber} — Resolve matches
               <span className="text-zinc-300"> · {activeRound.pointValue} pts</span>
             </h2>
-            <div className="space-y-3">
-              {activeRound.matches.map((match) => {
-                const item1 = match.slots[0] ? itemMap[match.slots[0].itemId] : null;
-                const item2 = match.slots[1] ? itemMap[match.slots[1].itemId] : null;
-                const resolved = match.status === "COMPLETE";
+            <div className="grid gap-3 sm:grid-cols-2">
+              {activeRound.matches
+                .filter((m) => m.status !== "COMPLETE")
+                .map((match) => {
+                  const item1 = match.slots[0] ? itemMap[match.slots[0].itemId] : null;
+                  const item2 = match.slots[1] ? itemMap[match.slots[1].itemId] : null;
+                  const isResolving = resolving === match.id;
 
-                return (
-                  <div
-                    key={match.id}
-                    className={`rounded-2xl border p-4 ${
-                      resolved ? "border-zinc-100 bg-zinc-50" : "border-zinc-200 bg-white"
-                    }`}
-                  >
-                    <p className="mb-2 text-xs text-zinc-400">Match {match.matchNumber}</p>
-                    <div className="flex gap-2">
-                      {[item1, item2].map((item, idx) => {
-                        if (!item)
+                  return (
+                    <div key={match.id} className="rounded-2xl border border-zinc-200 bg-white p-4">
+                      <p className="mb-3 text-xs text-zinc-400">Match {match.matchNumber}</p>
+                      <div className="flex gap-2">
+                        {[item1, item2].map((item, idx) => {
+                          if (!item)
+                            return (
+                              <div
+                                key={idx}
+                                className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-zinc-200 py-3 text-xs text-zinc-300"
+                              >
+                                TBD
+                              </div>
+                            );
                           return (
-                            <div
-                              key={idx}
-                              className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-zinc-200 py-3 text-xs text-zinc-300"
+                            <button
+                              key={item.id}
+                              disabled={isResolving}
+                              onClick={() => setWinner(match.id, item.id)}
+                              className="flex flex-1 flex-col items-center rounded-xl border border-zinc-200 px-3 py-3 text-sm hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-colors disabled:opacity-50"
                             >
-                              TBD
-                            </div>
+                              <span className="text-[10px] opacity-50">#{item.seed}</span>
+                              <span className="font-semibold text-center leading-tight">{item.name}</span>
+                            </button>
                           );
-                        const isWinner = match.winnerId === item.id;
-                        const isResolving = resolving === match.id;
-                        return (
-                          <button
-                            key={item.id}
-                            disabled={resolved || isResolving}
-                            onClick={() => setWinner(match.id, item.id)}
-                            className={`flex flex-1 flex-col items-center rounded-xl border px-3 py-3 text-sm transition-colors ${
-                              isWinner
-                                ? "border-green-500 bg-green-50 text-green-700"
-                                : resolved
-                                ? "border-zinc-100 text-zinc-300"
-                                : "border-zinc-200 hover:border-zinc-900 hover:bg-zinc-900 hover:text-white"
-                            } disabled:cursor-default`}
-                          >
-                            <span className="text-[10px] opacity-60">#{item.seed}</span>
-                            <span className="font-semibold">{item.name}</span>
-                            {isWinner && <span className="text-xs mt-0.5">Winner</span>}
-                          </button>
-                        );
-                      })}
+                        })}
+                      </div>
+                      {isResolving && (
+                        <p className="mt-2 text-center text-xs text-zinc-400">Saving...</p>
+                      )}
                     </div>
-                    {resolving === match.id && (
-                      <p className="mt-2 text-center text-xs text-zinc-400">Saving...</p>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
         )}
 
-        {completedRounds.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Completed rounds
-            </h2>
-            {completedRounds.map((round) => (
-              <div key={round.id} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4 space-y-2">
-                <p className="text-xs text-zinc-400">Round {round.roundNumber}</p>
-                {round.matches.map((match) => {
-                  const winner = match.winnerId ? itemMap[match.winnerId] : null;
-                  const loser = match.slots
-                    .map((s) => itemMap[s.itemId])
-                    .find((it) => it?.id !== match.winnerId);
-                  return (
-                    <div key={match.id} className="flex items-center gap-2 text-sm">
-                      <span className="font-medium">{winner?.name ?? "?"}</span>
-                      <span className="text-zinc-300">beat</span>
-                      <span className="text-zinc-400 line-through">{loser?.name ?? "?"}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Full bracket view */}
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 overflow-hidden">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4">
+            Bracket
+          </h2>
+          <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
+        </div>
       </div>
     </main>
   );
