@@ -14,5 +14,5 @@ export async function resetDb() {
 }
 
 export function setupTestDb() {
-  execSync("pnpm prisma migrate deploy", { stdio: "pipe" });
+  execSync("npx prisma migrate deploy", { stdio: "pipe" });
 }
