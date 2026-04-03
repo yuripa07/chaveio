@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
 
-  if (tournament.status !== "LOBBY") {
+  if (tournament.status === "FINISHED") {
     return Response.json(
-      { error: "Picks can only be submitted during LOBBY" },
+      { error: "Tournament is already finished" },
       { status: 409 }
     );
   }

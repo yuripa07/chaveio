@@ -30,6 +30,15 @@ export async function GET(
           hasSubmittedPicks: true,
         },
       },
+      rounds: {
+        orderBy: { roundNumber: "asc" },
+        include: {
+          matches: {
+            orderBy: { matchNumber: "asc" },
+            include: { slots: true },
+          },
+        },
+      },
     },
   });
 
@@ -41,6 +50,6 @@ export async function GET(
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { items, participants, ...tournamentData } = tournament;
-  return Response.json({ tournament: tournamentData, participants, items });
+  const { items, participants, rounds, ...tournamentData } = tournament;
+  return Response.json({ tournament: tournamentData, participants, items, rounds });
 }
