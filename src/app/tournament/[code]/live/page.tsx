@@ -23,37 +23,22 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
-  const [resolving, setResolving] = useState<string | null>(null); // matchId being resolved
+  const [resolving, setResolving] = useState<string | null>(null);
 
-  const loadState = useCallback(
-    async (tok: string) => {
-      const res = await fetch(`/api/tournaments/${code}`, {
-        headers: { Authorization: `Bearer ${tok}` },
-      });
-      if (!res.ok) return null;
-      return (await res.json()) as TournamentState;
-    },
-    [code]
-  );
+  const loadState = useCallback(async (tok: string) => {
+    const res = await fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } });
+    if (!res.ok) return null;
+    return (await res.json()) as TournamentState;
+  }, [code]);
 
   useEffect(() => {
     const stored = localStorage.getItem(`chaveio_token_${code}`);
-    if (!stored) {
-      router.replace(`/tournament/${code}`);
-      return;
-    }
-    const payload = decodeTokenPayload(stored);
-    if (!payload?.isCreator) {
-      router.replace(`/tournament/${code}/bracket`);
-      return;
-    }
+    if (!stored) { router.replace(`/tournament/${code}`); return; }
+    if (!decodeTokenPayload(stored)?.isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
     setToken(stored);
     loadState(stored).then((s) => {
       if (!s) return;
-      if (s.tournament.status === "FINISHED") {
-        router.replace(`/tournament/${code}/results`);
-        return;
-      }
+      if (s.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
       setState(s);
     });
   }, [code, loadState, router]);
@@ -70,10 +55,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       if (!res.ok) return;
       const s = await loadState(token);
       if (!s) return;
-      if (s.tournament.status === "FINISHED") {
-        router.replace(`/tournament/${code}/results`);
-        return;
-      }
+      if (s.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
       setState(s);
     } finally {
       setResolving(null);
@@ -82,92 +64,115 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   if (!state) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Spinner />
       </main>
     );
   }
 
   const itemMap = Object.fromEntries(state.items.map((it) => [it.id, it]));
   const activeRound = state.rounds.find((r) => r.status === "ACTIVE");
+  const pendingInRound = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-6 pt-12">
-      <div className="w-full max-w-5xl space-y-6">
-        <div className="flex items-start justify-between">
+    <main className="flex min-h-screen flex-col bg-zinc-50">
+      {/* Header */}
+      <div className="border-b border-zinc-100 bg-white px-6 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div>
-            <p className="text-xs font-mono tracking-widest text-zinc-400">{code}</p>
-            <h1 className="mt-1 text-2xl font-bold">{state.tournament.name}</h1>
-            <p className="text-sm text-zinc-500">Click the winner of each match</p>
+            <span className="font-mono text-xs font-semibold tracking-widest text-zinc-400">{code}</span>
+            <h1 className="text-base font-extrabold leading-tight tracking-tight">{state.tournament.name}</h1>
           </div>
           <Link
             href={`/tournament/${code}/results`}
-            className="text-sm text-zinc-400 hover:text-zinc-700"
+            className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
           >
             Scores →
           </Link>
         </div>
+      </div>
 
-        {/* Current round: card-based resolver */}
-        {activeRound && (
-          <div className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Round {activeRound.roundNumber} — Resolve matches
-              <span className="text-zinc-300"> · {activeRound.pointValue} pts</span>
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {activeRound.matches
-                .filter((m) => m.status !== "COMPLETE")
-                .map((match) => {
-                  const item1 = match.slots[0] ? itemMap[match.slots[0].itemId] : null;
-                  const item2 = match.slots[1] ? itemMap[match.slots[1].itemId] : null;
-                  const isResolving = resolving === match.id;
+      <div className="mx-auto w-full max-w-5xl flex-1 space-y-8 px-6 py-8">
 
-                  return (
-                    <div key={match.id} className="rounded-2xl border border-zinc-200 bg-white p-4">
-                      <p className="mb-3 text-xs text-zinc-400">Match {match.matchNumber}</p>
-                      <div className="flex gap-2">
-                        {[item1, item2].map((item, idx) => {
-                          if (!item)
-                            return (
-                              <div
-                                key={idx}
-                                className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-zinc-200 py-3 text-xs text-zinc-300"
-                              >
-                                TBD
-                              </div>
-                            );
-                          return (
-                            <button
-                              key={item.id}
-                              disabled={isResolving}
-                              onClick={() => setWinner(match.id, item.id)}
-                              className="flex flex-1 flex-col items-center rounded-xl border border-zinc-200 px-3 py-3 text-sm hover:border-green-500 hover:bg-green-50 hover:text-green-700 transition-colors disabled:opacity-50"
-                            >
-                              <span className="text-[10px] opacity-50">#{item.seed}</span>
-                              <span className="font-semibold text-center leading-tight">{item.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {isResolving && (
-                        <p className="mt-2 text-center text-xs text-zinc-400">Saving...</p>
-                      )}
-                    </div>
-                  );
-                })}
+        {/* Active round: big match cards */}
+        {activeRound && pendingInRound.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+              </span>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+                Round {activeRound.roundNumber} · {activeRound.pointValue} pts · click the winner
+              </h2>
             </div>
-          </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {pendingInRound.map((match) => {
+                const item1 = match.slots[0] ? itemMap[match.slots[0].itemId] : null;
+                const item2 = match.slots[1] ? itemMap[match.slots[1].itemId] : null;
+                const busy = resolving === match.id;
+
+                return (
+                  <div
+                    key={match.id}
+                    className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
+                  >
+                    <p className="border-b border-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-400">
+                      Match {match.matchNumber}
+                    </p>
+                    <div className="flex divide-x divide-zinc-100">
+                      {[item1, item2].map((item, idx) => {
+                        if (!item)
+                          return (
+                            <div key={idx} className="flex flex-1 items-center justify-center py-6 text-xs text-zinc-300">
+                              TBD
+                            </div>
+                          );
+                        return (
+                          <button
+                            key={item.id}
+                            disabled={busy}
+                            onClick={() => setWinner(match.id, item.id)}
+                            className="group flex flex-1 flex-col items-center gap-1.5 px-4 py-5 text-center hover:bg-indigo-600 hover:text-white active:scale-[.97] transition-all disabled:opacity-50"
+                          >
+                            <span className="rounded-lg bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-zinc-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                              #{item.seed}
+                            </span>
+                            <span className="font-semibold leading-tight">{item.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {busy && (
+                      <div className="border-t border-zinc-100 py-2 text-center text-xs text-zinc-400">
+                        Saving…
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
-        {/* Full bracket view */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 overflow-hidden">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4">
-            Bracket
-          </h2>
-          <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
-        </div>
+        {/* Full bracket */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Bracket</h2>
+          <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
+            <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
+          </div>
+        </section>
       </div>
     </main>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }

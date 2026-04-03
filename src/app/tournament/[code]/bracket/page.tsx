@@ -124,8 +124,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
   if (!state) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Spinner />
       </main>
     );
   }
@@ -137,49 +137,83 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   const pendingMatches = activeRounds
     .flatMap((r) => r.matches)
     .filter((m) => m.status !== "COMPLETE");
-  const allPicked = pendingMatches.every((m) => picks[m.id]);
+  const picked = pendingMatches.filter((m) => picks[m.id]).length;
+  const allPicked = picked === pendingMatches.length && pendingMatches.length > 0;
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-6 pt-12">
-      <div className="w-full max-w-5xl space-y-6">
-        <div>
-          <p className="text-xs font-mono tracking-widest text-zinc-400">{code}</p>
-          <h1 className="mt-1 text-2xl font-bold">{state.tournament.name}</h1>
-          <p className="text-sm text-zinc-500">Pick your winners — click to select</p>
+    <main className="flex min-h-screen flex-col bg-zinc-50">
+      {/* Header */}
+      <div className="border-b border-zinc-100 bg-white px-6 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
+          <div>
+            <span className="font-mono text-xs font-semibold tracking-widest text-zinc-400">{code}</span>
+            <h1 className="text-base font-extrabold leading-tight tracking-tight">{state.tournament.name}</h1>
+          </div>
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-100">
+            Pick your winners
+          </span>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <BracketView
-            rounds={activeRounds}
-            itemMap={itemMap}
-            picks={picks}
-            onPick={(matchId, itemId) => {
-              setPicks((p) => ({ ...p, [matchId]: itemId }));
-              setSaved(false);
-            }}
-            mode="pick"
-          />
+      <div className="flex flex-1 flex-col px-6 py-8">
+        <div className="mx-auto w-full max-w-5xl space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <BracketView
+              rounds={activeRounds}
+              itemMap={itemMap}
+              picks={picks}
+              onPick={(matchId, itemId) => {
+                setPicks((p) => ({ ...p, [matchId]: itemId }));
+                setSaved(false);
+              }}
+              mode="pick"
+            />
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          {saved && <p className="text-sm text-green-600">Picks saved!</p>}
-
-          {pendingMatches.length > 0 && (
-            <button
-              type="submit"
-              disabled={submitting || !allPicked}
-              className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
-            >
-              {submitting ? "Saving..." : `Save picks (${Object.keys(picks).length}/${pendingMatches.length} picked)`}
-            </button>
-          )}
-
-          {pendingMatches.length === 0 && (
-            <p className="text-center text-sm text-zinc-400">
-              Waiting for the next round...
-            </p>
-          )}
-        </form>
+            <div className="flex items-center gap-3">
+              {pendingMatches.length > 0 ? (
+                <>
+                  <button
+                    type="submit"
+                    disabled={submitting || !allPicked}
+                    className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? "Saving…" : "Save picks"}
+                  </button>
+                  <span className="text-sm text-zinc-400">
+                    {picked} / {pendingMatches.length} picked
+                  </span>
+                  {saved && (
+                    <span className="flex items-center gap-1 text-sm font-medium text-emerald-600">
+                      <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4">
+                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
+                      </svg>
+                      Saved!
+                    </span>
+                  )}
+                  {error && <span className="text-sm text-red-500">{error}</span>}
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                  </span>
+                  Waiting for the next round…
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </main>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }

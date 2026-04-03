@@ -6,13 +6,13 @@ const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Chaveio",
-  description: "Bracket prediction app for team bonding events",
+  description: "Bracket predictions for your team",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={geist.className}>
-      <body className="min-h-screen bg-zinc-50 text-zinc-900">{children}</body>
+      <body className="min-h-screen bg-white text-zinc-900">{children}</body>
     </html>
   );
 }

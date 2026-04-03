@@ -11,6 +11,7 @@ type Slot = { id: string; itemId: string; position: number };
 type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
 type Round = { id: string; roundNumber: number; status: string; pointValue: number; matches: Match[] };
 type Participant = { id: string; displayName: string; isCreator: boolean; hasSubmittedPicks: boolean };
+type Pick = { matchId: string; pickedItemId: string; isCorrect: boolean | null; pointsEarned: number };
 
 type TournamentState = {
   tournament: { id: string; code: string; name: string; status: string };
@@ -19,10 +20,6 @@ type TournamentState = {
   rounds: Round[];
 };
 
-type Pick = { matchId: string; pickedItemId: string; isCorrect: boolean | null; pointsEarned: number };
-
-type LeaderboardEntry = { participant: Participant; points: number; correct: number };
-
 export default function ResultsPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
@@ -30,61 +27,40 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
   const [myPicks, setMyPicks] = useState<Pick[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isCreator, setIsCreator] = useState(false);
 
-  const loadData = useCallback(
-    async (tok: string) => {
-      const [tRes, pRes] = await Promise.all([
-        fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
-        fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
-      ]);
-      if (!tRes.ok) return null;
-      const tData = (await tRes.json()) as TournamentState;
-      const picks: Pick[] = pRes.ok ? (await pRes.json()).picks ?? [] : [];
-      return { tData, picks };
-    },
-    [code]
-  );
+  const loadData = useCallback(async (tok: string) => {
+    const [tRes, pRes] = await Promise.all([
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
+      fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
+    ]);
+    if (!tRes.ok) return null;
+    const tData = (await tRes.json()) as TournamentState;
+    const picks: Pick[] = pRes.ok ? (await pRes.json()).picks ?? [] : [];
+    return { tData, picks };
+  }, [code]);
 
   useEffect(() => {
     const stored = localStorage.getItem(`chaveio_token_${code}`);
-    if (!stored) {
-      router.replace(`/tournament/${code}`);
-      return;
-    }
+    if (!stored) { router.replace(`/tournament/${code}`); return; }
     const payload = decodeTokenPayload(stored);
     setIsCreator(payload?.isCreator ?? false);
     setToken(stored);
-
     loadData(stored).then((result) => {
       if (!result) return;
-      const { tData, picks } = result;
-      setState(tData);
-      setMyPicks(picks);
-
-      // Build leaderboard from picks (we only have own picks — show own score at minimum)
-      // Full leaderboard would require a server endpoint that aggregates all participants' scores
-      // For now, compute own score
-      const myPoints = picks.reduce((sum, p) => sum + p.pointsEarned, 0);
-      const myCorrect = picks.filter((p) => p.isCorrect).length;
-      const me = tData.participants.find((p) => p.id === payload?.participantId);
-      if (me) {
-        setLeaderboard([{ participant: me, points: myPoints, correct: myCorrect }]);
-      }
+      setState(result.tData);
+      setMyPicks(result.picks);
     });
   }, [code, loadData, router]);
 
-  // Poll while tournament is still active
   useEffect(() => {
     if (!token || state?.tournament.status === "FINISHED") return;
     const interval = setInterval(() => {
       loadData(token).then((result) => {
         if (!result) return;
-        const { tData, picks } = result;
-        setState(tData);
-        setMyPicks(picks);
-        if (tData.tournament.status === "FINISHED") clearInterval(interval);
+        setState(result.tData);
+        setMyPicks(result.picks);
+        if (result.tData.tournament.status === "FINISHED") clearInterval(interval);
       });
     }, 4000);
     return () => clearInterval(interval);
@@ -92,8 +68,8 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
   if (!state) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Spinner />
       </main>
     );
   }
@@ -101,72 +77,184 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   const itemMap = Object.fromEntries(state.items.map((it) => [it.id, it]));
   const myPickMap = Object.fromEntries(myPicks.map((p) => [p.matchId, p]));
   const myTotalPoints = myPicks.reduce((s, p) => s + p.pointsEarned, 0);
-  // Enrich rounds with pick-based winnerId overlay for coloring
-  const enrichedRounds = state.rounds.map((r) => ({
-    ...r,
-    matches: r.matches.map((m) => ({ ...m, winnerId: m.winnerId ?? null })),
-  }));
+  const resolvedCount = myPicks.filter((p) => p.isCorrect !== null).length;
+  const correctCount = myPicks.filter((p) => p.isCorrect).length;
+  const finished = state.tournament.status === "FINISHED";
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-6 pt-12">
-      <div className="w-full max-w-5xl space-y-6">
-        <div className="flex items-start justify-between">
+    <main className="flex min-h-screen flex-col bg-zinc-50">
+      {/* Header */}
+      <div className="border-b border-zinc-100 bg-white px-6 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div>
-            <p className="text-xs font-mono tracking-widest text-zinc-400">{code}</p>
-            <h1 className="mt-1 text-2xl font-bold">{state.tournament.name}</h1>
-            <p className="mt-0.5 text-sm text-zinc-500">
-              {state.tournament.status === "FINISHED" ? "Tournament finished" : "In progress"}
-            </p>
+            <span className="font-mono text-xs font-semibold tracking-widest text-zinc-400">{code}</span>
+            <h1 className="text-base font-extrabold leading-tight tracking-tight">{state.tournament.name}</h1>
           </div>
-          {isCreator && state.tournament.status !== "FINISHED" && (
-            <Link
-              href={`/tournament/${code}/live`}
-              className="text-sm text-zinc-400 hover:text-zinc-700"
-            >
-              ← Resolve matches
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {finished ? (
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Finished
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                </span>
+                In progress
+              </span>
+            )}
+            {isCreator && !finished && (
+              <Link
+                href={`/tournament/${code}/live`}
+                className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
+              >
+                ← Resolve
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-8">
+
+        {/* Score card */}
+        <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-6 py-6 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Your score</p>
+            <p className="mt-1 text-5xl font-black tracking-tight">{myTotalPoints}</p>
+            <p className="mt-0.5 text-sm font-medium opacity-75">points</p>
+          </div>
+          <div className="flex divide-x divide-zinc-100">
+            <Stat label="Correct" value={correctCount} />
+            <Stat label="Resolved" value={resolvedCount} />
+            <Stat label="Pending" value={(myPicks.length - resolvedCount)} />
+          </div>
         </div>
 
-        {/* Own score */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 flex items-center gap-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">Your score</p>
-            <p className="text-4xl font-bold">{myTotalPoints} pts</p>
-            <p className="text-sm text-zinc-500 mt-1">
-              {myPicks.filter((p) => p.isCorrect).length} correct /{" "}
-              {myPicks.filter((p) => p.isCorrect !== null).length} resolved
-            </p>
-          </div>
-        </div>
+        {/* Picks breakdown */}
+        {resolvedCount > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">My picks</h2>
+            <div className="space-y-2">
+              {state.rounds.flatMap((round) =>
+                round.matches
+                  .filter((m) => m.status === "COMPLETE")
+                  .map((match) => {
+                    const winner = match.winnerId ? itemMap[match.winnerId] : null;
+                    const myPick = myPickMap[match.id];
+                    const myItem = myPick ? itemMap[myPick.pickedItemId] : null;
+                    const correct = myPick?.isCorrect;
 
-        {/* Visual bracket */}
-        {state.rounds.length > 0 && (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 overflow-hidden">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4">
-              Bracket
-            </h2>
-            <BracketView
-              rounds={enrichedRounds}
-              itemMap={itemMap}
-              picks={myPickMap ? Object.fromEntries(
-                Object.entries(myPickMap).map(([k, v]) => [k, v.pickedItemId])
-              ) : {}}
-              mode="view"
-            />
-          </div>
+                    return (
+                      <div
+                        key={match.id}
+                        className={[
+                          "flex items-center gap-3 rounded-xl border px-4 py-3",
+                          correct === true
+                            ? "border-emerald-200 bg-emerald-50"
+                            : correct === false
+                            ? "border-red-100 bg-red-50"
+                            : "border-zinc-100 bg-white",
+                        ].join(" ")}
+                      >
+                        <div className="shrink-0">
+                          {correct === true ? (
+                            <svg viewBox="0 0 16 16" fill="currentColor" className="h-5 w-5 text-emerald-500">
+                              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
+                            </svg>
+                          ) : correct === false ? (
+                            <svg viewBox="0 0 16 16" fill="currentColor" className="h-5 w-5 text-red-400">
+                              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm-3.28-6.22a.75.75 0 0 0 1.06 1.06L8 9.06l2.22 2.22a.75.75 0 1 0 1.06-1.06L9.06 8l2.22-2.22a.75.75 0 0 0-1.06-1.06L8 6.94 5.78 4.72a.75.75 0 0 0-1.06 1.06L6.94 8l-2.22 2.22Z" />
+                            </svg>
+                          ) : (
+                            <div className="h-5 w-5 rounded-full border-2 border-zinc-200" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <span className="text-[10px] font-bold text-zinc-400">R{round.roundNumber}</span>
+                            <span className="font-semibold text-zinc-800 truncate">
+                              {winner?.name ?? "?"}
+                            </span>
+                            <span className="text-zinc-400">won</span>
+                          </div>
+                          {myItem && (
+                            <p className="mt-0.5 text-xs text-zinc-400">
+                              You picked:{" "}
+                              <span className={correct ? "font-semibold text-emerald-600" : "text-red-400"}>
+                                {myItem.name}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                        {myPick && myPick.isCorrect !== null && (
+                          <span
+                            className={[
+                              "shrink-0 rounded-lg px-2.5 py-1 text-sm font-bold",
+                              correct
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-zinc-100 text-zinc-400",
+                            ].join(" ")}
+                          >
+                            {correct ? `+${myPick.pointsEarned}` : "0"}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </section>
         )}
 
-        {state.rounds.length === 0 && (
-          <p className="text-center text-sm text-zinc-400">
-            No results yet — waiting for the first match to be resolved.
+        {/* Bracket */}
+        {state.rounds.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Bracket</h2>
+            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
+              <BracketView
+                rounds={state.rounds}
+                itemMap={itemMap}
+                picks={Object.fromEntries(
+                  Object.entries(myPickMap).map(([k, v]) => [k, v.pickedItemId])
+                )}
+                mode="view"
+              />
+            </div>
+          </section>
+        )}
+
+        {resolvedCount === 0 && state.rounds.length === 0 && (
+          <p className="py-12 text-center text-sm text-zinc-400">
+            No results yet — waiting for the first match.
           </p>
         )}
 
-        <Link href="/" className="block text-center text-sm text-zinc-400 hover:text-zinc-700">
-          ← Home
-        </Link>
+        <div className="text-center">
+          <Link href="/" className="text-sm text-zinc-400 hover:text-zinc-700 transition-colors">
+            ← Home
+          </Link>
+        </div>
       </div>
     </main>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-1 flex-col items-center py-3">
+      <p className="text-lg font-bold text-zinc-900">{value}</p>
+      <p className="text-xs text-zinc-400">{label}</p>
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }

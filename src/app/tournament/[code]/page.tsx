@@ -31,36 +31,30 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
 
-  const fetchState = useCallback(
-    async (tok: string) => {
-      const res = await fetch(`/api/tournaments/${code}`, {
-        headers: { Authorization: `Bearer ${tok}` },
-      });
-      if (!res.ok) return null;
-      return (await res.json()) as TournamentData;
-    },
-    [code]
-  );
+  const fetchState = useCallback(async (tok: string) => {
+    const res = await fetch(`/api/tournaments/${code}`, {
+      headers: { Authorization: `Bearer ${tok}` },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as TournamentData;
+  }, [code]);
 
   useEffect(() => {
     const stored = localStorage.getItem(`chaveio_token_${code}`);
     if (!stored) return;
     setToken(stored);
-    const payload = decodeTokenPayload(stored);
-    const creator = payload?.isCreator ?? false;
+    const creator = decodeTokenPayload(stored)?.isCreator ?? false;
     setIsCreator(creator);
     fetchState(stored).then((d) => {
       if (!d) return;
       setData(d);
-      if (d.tournament.status === "ACTIVE") {
+      if (d.tournament.status === "ACTIVE")
         router.replace(creator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`);
-      } else if (d.tournament.status === "FINISHED") {
+      else if (d.tournament.status === "FINISHED")
         router.replace(`/tournament/${code}/results`);
-      }
     });
   }, [code, fetchState, router]);
 
-  // Poll for updates when in LOBBY
   useEffect(() => {
     if (!token || data?.tournament.status !== "LOBBY") return;
     const interval = setInterval(() => {
@@ -90,14 +84,10 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         body: JSON.stringify({ displayName: joinName, password: joinPassword }),
       });
       const body = await res.json();
-      if (!res.ok) {
-        setJoinError(body.error ?? "Failed to join");
-        return;
-      }
+      if (!res.ok) { setJoinError(body.error ?? "Failed to join"); return; }
       localStorage.setItem(`chaveio_token_${code}`, body.token);
       setToken(body.token);
-      const payload = decodeTokenPayload(body.token);
-      setIsCreator(payload?.isCreator ?? false);
+      setIsCreator(decodeTokenPayload(body.token)?.isCreator ?? false);
       const d = await fetchState(body.token);
       if (d) setData(d);
     } catch {
@@ -115,53 +105,63 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        router.replace(`/tournament/${code}/live`);
-      }
+      if (res.ok) router.replace(`/tournament/${code}/live`);
     } finally {
       setStarting(false);
     }
   }
 
+  /* ── Join screen (not yet authenticated) ── */
   if (!token) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-6">
-        <div className="w-full max-w-sm space-y-6">
-          <div className="text-center">
-            <p className="text-xs font-mono text-zinc-400 tracking-widest">{code}</p>
-            <h1 className="mt-1 text-2xl font-bold">Join tournament</h1>
+      <main className="flex min-h-screen flex-col bg-zinc-50">
+        <div className="border-b border-zinc-100 bg-white px-6 py-4">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
+            <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+              <path d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z" />
+            </svg>
+            Home
+          </Link>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <div className="w-full max-w-sm space-y-6">
+            <div className="text-center">
+              <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-100">
+                {code}
+              </span>
+              <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Join tournament</h1>
+              <p className="mt-1 text-sm text-zinc-500">Enter your name and password to join.</p>
+            </div>
+            <form onSubmit={handleJoin} className="space-y-3">
+              <input
+                type="text"
+                placeholder="Your name"
+                value={joinName}
+                onChange={(e) => setJoinName(e.target.value)}
+                required
+                autoFocus
+                className={inp}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={joinPassword}
+                onChange={(e) => setJoinPassword(e.target.value)}
+                required
+                className={inp}
+              />
+              {joinError && (
+                <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{joinError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={joining}
+                className={btnPrimary}
+              >
+                {joining ? "Joining…" : "Join tournament"}
+              </button>
+            </form>
           </div>
-          <form onSubmit={handleJoin} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Your name"
-              value={joinName}
-              onChange={(e) => setJoinName(e.target.value)}
-              required
-              className="w-full rounded-xl border border-zinc-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={joinPassword}
-              onChange={(e) => setJoinPassword(e.target.value)}
-              required
-              className="w-full rounded-xl border border-zinc-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
-            />
-            {joinError && <p className="text-sm text-red-500">{joinError}</p>}
-            <button
-              type="submit"
-              disabled={joining}
-              className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
-            >
-              {joining ? "Joining..." : "Join"}
-            </button>
-          </form>
-          <p className="text-center text-sm text-zinc-400">
-            <Link href="/" className="hover:text-zinc-700">
-              ← Home
-            </Link>
-          </p>
         </div>
       </main>
     );
@@ -169,8 +169,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
   if (!data) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-zinc-400">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Spinner />
       </main>
     );
   }
@@ -178,65 +178,117 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const { tournament, participants, items } = data;
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-6 pt-12">
-      <div className="w-full max-w-md space-y-6">
-        <div>
-          <p className="text-xs font-mono tracking-widest text-zinc-400">{tournament.code}</p>
-          <h1 className="mt-1 text-2xl font-bold">{tournament.name}</h1>
-          <p className="text-sm text-zinc-500">{tournament.theme}</p>
+    <main className="flex min-h-screen flex-col bg-zinc-50">
+      {/* Header */}
+      <div className="border-b border-zinc-100 bg-white px-6 py-4">
+        <div className="mx-auto flex max-w-2xl items-center justify-between">
+          <Link href="/" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+            Chaveio
+          </Link>
+          <span className="rounded-full border border-zinc-200 px-3 py-1 font-mono text-xs font-semibold tracking-widest text-zinc-500">
+            {tournament.code}
+          </span>
         </div>
+      </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-            Participants ({participants.length})
-          </h2>
-          <ul className="space-y-1">
-            {participants.map((p) => (
-              <li key={p.id} className="flex items-center gap-2 text-sm">
-                <span className="flex-1">{p.displayName}</span>
-                {p.isCreator && (
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-                    creator
-                  </span>
-                )}
-                {p.hasSubmittedPicks && (
-                  <span className="text-green-500 text-xs">✓ picks submitted</span>
-                )}
-              </li>
-            ))}
-          </ul>
+      <div className="flex flex-1 justify-center px-6 py-10">
+        <div className="w-full max-w-2xl space-y-6">
+          {/* Tournament title */}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight">{tournament.name}</h1>
+              <p className="mt-0.5 text-sm text-zinc-500">{tournament.theme}</p>
+            </div>
+            <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+              Lobby
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Participants */}
+            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Participants · {participants.length}
+              </h2>
+              <ul className="space-y-2">
+                {participants.map((p) => (
+                  <li key={p.id} className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">
+                      {p.displayName[0].toUpperCase()}
+                    </div>
+                    <span className="flex-1 text-sm font-medium">{p.displayName}</span>
+                    <div className="flex items-center gap-1.5">
+                      {p.isCreator && (
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+                          host
+                        </span>
+                      )}
+                      {p.hasSubmittedPicks && (
+                        <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-emerald-500">
+                          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
+                        </svg>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Items */}
+            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Bracket · {items.length} items
+              </h2>
+              <ul className="space-y-1.5">
+                {items.map((item) => (
+                  <li key={item.id} className="flex items-center gap-2 text-sm">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-[10px] font-bold text-zinc-500">
+                      {item.seed}
+                    </span>
+                    <span className="text-zinc-700">{item.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* CTA */}
+          {isCreator && tournament.status === "LOBBY" && (
+            <button
+              onClick={handleStart}
+              disabled={starting}
+              className={btnPrimary}
+            >
+              {starting ? "Starting…" : "Start tournament"}
+            </button>
+          )}
+
+          {!isCreator && tournament.status === "LOBBY" && (
+            <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-zinc-100 bg-white py-4 text-sm text-zinc-500 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              </span>
+              Waiting for the host to start…
+            </div>
+          )}
         </div>
-
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-            Items ({items.length})
-          </h2>
-          <ul className="grid grid-cols-2 gap-1">
-            {items.map((item) => (
-              <li key={item.id} className="text-sm text-zinc-700">
-                <span className="text-zinc-400 text-xs mr-1">#{item.seed}</span>
-                {item.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {isCreator && tournament.status === "LOBBY" && (
-          <button
-            onClick={handleStart}
-            disabled={starting}
-            className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-700 transition-colors disabled:opacity-50"
-          >
-            {starting ? "Starting..." : "Start tournament"}
-          </button>
-        )}
-
-        {!isCreator && tournament.status === "LOBBY" && (
-          <p className="text-center text-sm text-zinc-400">
-            Waiting for the creator to start the tournament...
-          </p>
-        )}
       </div>
     </main>
+  );
+}
+
+const inp =
+  "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition";
+
+const btnPrimary =
+  "w-full rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed";
+
+function Spinner() {
+  return (
+    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   );
 }
