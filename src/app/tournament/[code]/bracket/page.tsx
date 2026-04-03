@@ -8,7 +8,7 @@ import BracketView from "@/components/BracketView";
 type Item = { id: string; name: string; seed: number };
 type Slot = { id: string; itemId: string; position: number };
 type Match = { id: string; matchNumber: number; status: string; winnerId?: string | null; slots: Slot[] };
-type Round = { id: string; roundNumber: number; status: string; pointValue: number; matches: Match[] };
+type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
 
 type TournamentState = {
   tournament: { id: string; code: string; name: string; status: string };
@@ -150,7 +150,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
             <h1 className="text-base font-extrabold leading-tight tracking-tight">{state.tournament.name}</h1>
           </div>
           <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-100">
-            Pick your winners
+            Escolha os vencedores
           </span>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                     disabled={submitting || !allPicked}
                     className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {submitting ? "Saving…" : "Save picks"}
+                    {submitting ? "Salvando…" : "Salvar palpites"}
                   </button>
                   <span className="text-sm text-zinc-400">
                     {picked} / {pendingMatches.length} picked
@@ -187,7 +187,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                       <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4">
                         <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
                       </svg>
-                      Saved!
+                      Salvo!
                     </span>
                   )}
                   {error && <span className="text-sm text-red-500">{error}</span>}
@@ -198,7 +198,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
                   </span>
-                  Waiting for the next round…
+                  Aguardando a próxima rodada…
                 </div>
               )}
             </div>

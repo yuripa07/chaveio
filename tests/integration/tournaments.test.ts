@@ -14,7 +14,6 @@ describe("POST /api/tournaments", () => {
   it("creates a tournament and returns a code + token", async () => {
     const res = await createTournament({
       name: "Best Country",
-      theme: "Geography",
       items: ["Brazil", "Japan", "Germany", "France"],
       creatorName: "Alice",
       creatorPassword: "pass123",
@@ -28,8 +27,7 @@ describe("POST /api/tournaments", () => {
   it("rejects non-power-of-2 item counts", async () => {
     const res = await createTournament({
       name: "Bad Tournament",
-      theme: "Theme",
-      items: ["A", "B", "C"],
+            items: ["A", "B", "C"],
       creatorName: "Bob",
       creatorPassword: "pass",
     });
@@ -39,8 +37,7 @@ describe("POST /api/tournaments", () => {
   it("rejects item count below 4", async () => {
     const res = await createTournament({
       name: "Too Small",
-      theme: "Theme",
-      items: ["A", "B"],
+            items: ["A", "B"],
       creatorName: "Bob",
       creatorPassword: "pass",
     });
@@ -50,8 +47,7 @@ describe("POST /api/tournaments", () => {
   it("rejects item count above 32", async () => {
     const res = await createTournament({
       name: "Too Big",
-      theme: "Theme",
-      items: Array.from({ length: 64 }, (_, i) => `Item ${i}`),
+            items: Array.from({ length: 64 }, (_, i) => `Item ${i}`),
       creatorName: "Bob",
       creatorPassword: "pass",
     });
@@ -61,7 +57,6 @@ describe("POST /api/tournaments", () => {
   it("persists tournament and creator in DB", async () => {
     const res = await createTournament({
       name: "Best Country",
-      theme: "Geography",
       items: ["Brazil", "Japan", "Germany", "France"],
       creatorName: "Alice",
       creatorPassword: "pass123",

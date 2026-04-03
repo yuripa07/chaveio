@@ -9,7 +9,7 @@ import BracketView from "@/components/BracketView";
 type Item = { id: string; name: string; seed: number };
 type Slot = { id: string; itemId: string; position: number };
 type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
-type Round = { id: string; roundNumber: number; status: string; pointValue: number; matches: Match[] };
+type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
 
 type TournamentState = {
   tournament: { id: string; code: string; name: string; status: string };
@@ -87,7 +87,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
             href={`/tournament/${code}/results`}
             className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
           >
-            Scores →
+            Placar →
           </Link>
         </div>
       </div>
@@ -103,7 +103,10 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
               </span>
               <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500">
-                Round {activeRound.roundNumber} · {activeRound.pointValue} pts · click the winner
+                {activeRound.name
+                  ? `${activeRound.name} · ${activeRound.pointValue} pts`
+                  : `Rodada ${activeRound.roundNumber} · ${activeRound.pointValue} pts`
+                } · clique no vencedor
               </h2>
             </div>
 
@@ -119,14 +122,14 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                     className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
                   >
                     <p className="border-b border-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-400">
-                      Match {match.matchNumber}
+                      Partida {match.matchNumber}
                     </p>
                     <div className="flex divide-x divide-zinc-100">
                       {[item1, item2].map((item, idx) => {
                         if (!item)
                           return (
                             <div key={idx} className="flex flex-1 items-center justify-center py-6 text-xs text-zinc-300">
-                              TBD
+                              A definir
                             </div>
                           );
                         return (
@@ -146,7 +149,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                     </div>
                     {busy && (
                       <div className="border-t border-zinc-100 py-2 text-center text-xs text-zinc-400">
-                        Saving…
+                        Salvando…
                       </div>
                     )}
                   </div>
@@ -158,7 +161,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
         {/* Full bracket */}
         <section className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Bracket</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Chaveamento</h2>
           <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
             <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
           </div>

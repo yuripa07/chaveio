@@ -9,7 +9,7 @@ import BracketView from "@/components/BracketView";
 type Item = { id: string; name: string; seed: number };
 type Slot = { id: string; itemId: string; position: number };
 type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
-type Round = { id: string; roundNumber: number; status: string; pointValue: number; matches: Match[] };
+type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
 type Participant = { id: string; displayName: string; isCreator: boolean; hasSubmittedPicks: boolean };
 type Pick = { matchId: string; pickedItemId: string; isCorrect: boolean | null; pointsEarned: number };
 
@@ -93,7 +93,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           <div className="flex items-center gap-2">
             {finished ? (
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                Finished
+                Finalizado
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
@@ -101,7 +101,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
                 </span>
-                In progress
+                Em andamento
               </span>
             )}
             {isCreator && !finished && (
@@ -109,7 +109,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                 href={`/tournament/${code}/live`}
                 className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
               >
-                ← Resolve
+                ← Resolver
               </Link>
             )}
           </div>
@@ -121,21 +121,21 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         {/* Score card */}
         <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-6 py-6 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Your score</p>
+            <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Sua pontuação</p>
             <p className="mt-1 text-5xl font-black tracking-tight">{myTotalPoints}</p>
-            <p className="mt-0.5 text-sm font-medium opacity-75">points</p>
+            <p className="mt-0.5 text-sm font-medium opacity-75">pontos</p>
           </div>
           <div className="flex divide-x divide-zinc-100">
-            <Stat label="Correct" value={correctCount} />
-            <Stat label="Resolved" value={resolvedCount} />
-            <Stat label="Pending" value={(myPicks.length - resolvedCount)} />
+            <Stat label="Corretos" value={correctCount} />
+            <Stat label="Resolvidos" value={resolvedCount} />
+            <Stat label="Pendentes" value={(myPicks.length - resolvedCount)} />
           </div>
         </div>
 
         {/* Picks breakdown */}
         {resolvedCount > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">My picks</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Meus palpites</h2>
             <div className="space-y-2">
               {state.rounds.flatMap((round) =>
                 round.matches
@@ -173,15 +173,17 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 text-sm">
-                            <span className="text-[10px] font-bold text-zinc-400">R{round.roundNumber}</span>
+                            <span className="text-[10px] font-bold text-zinc-400">
+                              {round.name || `R${round.roundNumber}`}
+                            </span>
                             <span className="font-semibold text-zinc-800 truncate">
                               {winner?.name ?? "?"}
                             </span>
-                            <span className="text-zinc-400">won</span>
+                            <span className="text-zinc-400">ganhou</span>
                           </div>
                           {myItem && (
                             <p className="mt-0.5 text-xs text-zinc-400">
-                              You picked:{" "}
+                              Você escolheu:{" "}
                               <span className={correct ? "font-semibold text-emerald-600" : "text-red-400"}>
                                 {myItem.name}
                               </span>
@@ -211,7 +213,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         {/* Bracket */}
         {state.rounds.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Bracket</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Chaveamento</h2>
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
               <BracketView
                 rounds={state.rounds}
@@ -227,13 +229,13 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
         {resolvedCount === 0 && state.rounds.length === 0 && (
           <p className="py-12 text-center text-sm text-zinc-400">
-            No results yet — waiting for the first match.
+            Nenhum resultado ainda — aguardando a primeira partida.
           </p>
         )}
 
         <div className="text-center">
           <Link href="/" className="text-sm text-zinc-400 hover:text-zinc-700 transition-colors">
-            ← Home
+            ← Início
           </Link>
         </div>
       </div>

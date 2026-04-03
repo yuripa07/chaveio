@@ -38,6 +38,11 @@ export async function POST(
   const totalRounds = Math.log2(n);
   const pairs = generateFirstRoundPairs(n);
 
+  let roundNames: string[] = [];
+  try {
+    roundNames = JSON.parse(tournament.roundNames || "[]");
+  } catch { /* ignore */ }
+
   await prisma.$transaction(async (tx) => {
     // Create all rounds
     const rounds = await Promise.all(
@@ -47,6 +52,7 @@ export async function POST(
           data: {
             tournamentId: tournament.id,
             roundNumber,
+            name: roundNames[i] ?? null,
             status: roundNumber === 1 ? "ACTIVE" : "PENDING",
             pointValue: computeRoundPoints(roundNumber, totalRounds, n),
           },

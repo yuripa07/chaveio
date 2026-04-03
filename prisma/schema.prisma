@@ -8,14 +8,14 @@ datasource db {
 }
 
 model Tournament {
-  id        String    @id @default(cuid())
-  code      String    @unique
-  name      String
-  theme     String
-  status    String    @default("LOBBY")
-  createdAt DateTime  @default(now())
-  startedAt DateTime?
-  endedAt   DateTime?
+  id         String    @id @default(cuid())
+  code       String    @unique
+  name       String
+  roundNames String    @default("[]") // JSON array of round names
+  status     String    @default("LOBBY")
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  endedAt    DateTime?
 
   items        TournamentItem[]
   participants Participant[]
@@ -49,10 +49,11 @@ model Participant {
 }
 
 model Round {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   tournamentId String
   roundNumber  Int
-  status       String @default("PENDING")
+  name         String?
+  status       String  @default("PENDING")
   pointValue   Int
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)

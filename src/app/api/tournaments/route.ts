@@ -16,21 +16,29 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { name, theme, items, creatorName, creatorPassword } = body as {
+  const { name, items, creatorName, creatorPassword, roundNames } = body as {
     name: string;
-    theme: string;
     items: string[];
     creatorName: string;
     creatorPassword: string;
+    roundNames?: string[];
   };
 
-  if (!name || !theme || !creatorName || !creatorPassword) {
+  if (!name || !creatorName || !creatorPassword) {
     return Response.json({ error: "Missing required fields" }, { status: 400 });
   }
 
   if (!Array.isArray(items) || !isPowerOfTwo(items.length)) {
     return Response.json(
       { error: "items must be a power of 2 between 4 and 32" },
+      { status: 400 }
+    );
+  }
+
+  const totalRounds = Math.log2(items.length);
+  if (roundNames && roundNames.length !== totalRounds) {
+    return Response.json(
+      { error: `roundNames must have exactly ${totalRounds} entries` },
       { status: 400 }
     );
   }
@@ -56,7 +64,7 @@ export async function POST(req: NextRequest) {
       data: {
         code,
         name,
-        theme,
+        roundNames: JSON.stringify(roundNames ?? []),
         items: {
           create: items.map((itemName, i) => ({ name: itemName, seed: i + 1 })),
         },

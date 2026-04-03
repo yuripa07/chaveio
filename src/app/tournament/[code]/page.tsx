@@ -84,14 +84,14 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         body: JSON.stringify({ displayName: joinName, password: joinPassword }),
       });
       const body = await res.json();
-      if (!res.ok) { setJoinError(body.error ?? "Failed to join"); return; }
+      if (!res.ok) { setJoinError(body.error ?? "Falha ao entrar"); return; }
       localStorage.setItem(`chaveio_token_${code}`, body.token);
       setToken(body.token);
       setIsCreator(decodeTokenPayload(body.token)?.isCreator ?? false);
       const d = await fetchState(body.token);
       if (d) setData(d);
     } catch {
-      setJoinError("Network error");
+      setJoinError("Erro de rede");
     } finally {
       setJoining(false);
     }
@@ -120,7 +120,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
               <path d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z" />
             </svg>
-            Home
+            Início
           </Link>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center p-6">
@@ -130,7 +130,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 {code}
               </span>
               <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Join tournament</h1>
-              <p className="mt-1 text-sm text-zinc-500">Enter your name and password to join.</p>
+              <p className="mt-1 text-sm text-zinc-500">Digite seu nome e senha para entrar.</p>
             </div>
             <form onSubmit={handleJoin} className="space-y-3">
               <input
@@ -158,7 +158,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 disabled={joining}
                 className={btnPrimary}
               >
-                {joining ? "Joining…" : "Join tournament"}
+                {joining ? "Entrando…" : "Entrar no torneio"}
               </button>
             </form>
           </div>
@@ -200,7 +200,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               <p className="mt-0.5 text-sm text-zinc-500">{tournament.theme}</p>
             </div>
             <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-              Lobby
+              Sala de espera
             </span>
           </div>
 
@@ -208,7 +208,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             {/* Participants */}
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Participants · {participants.length}
+                Participantes · {participants.length}
               </h2>
               <ul className="space-y-2">
                 {participants.map((p) => (
@@ -220,7 +220,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                     <div className="flex items-center gap-1.5">
                       {p.isCreator && (
                         <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
-                          host
+                          criador
                         </span>
                       )}
                       {p.hasSubmittedPicks && (
@@ -237,7 +237,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             {/* Items */}
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Bracket · {items.length} items
+                Chaveamento · {items.length} itens
               </h2>
               <ul className="space-y-1.5">
                 {items.map((item) => (
@@ -259,7 +259,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               disabled={starting}
               className={btnPrimary}
             >
-              {starting ? "Starting…" : "Start tournament"}
+              {starting ? "Iniciando…" : "Iniciar torneio"}
             </button>
           )}
 
@@ -269,7 +269,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
               </span>
-              Waiting for the host to start…
+              Aguardando o criador iniciar…
             </div>
           )}
         </div>

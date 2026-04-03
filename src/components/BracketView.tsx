@@ -12,6 +12,7 @@ type Match = {
 type Round = {
   id: string;
   roundNumber: number;
+  name?: string | null;
   status: string;
   pointValue: number;
   matches: Match[];
@@ -48,7 +49,7 @@ export default function BracketView({ rounds, itemMap, picks = {}, onPick, mode 
               {/* Column header */}
               <div className="mb-2 px-4">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                  {isLast ? "Final" : `Round ${round.roundNumber}`}
+                  {round.name || (isLast ? "Final" : `Rodada ${round.roundNumber}`)}
                   <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-zinc-500">
                     {round.pointValue}pt
                   </span>
@@ -119,7 +120,7 @@ export default function BracketView({ rounds, itemMap, picks = {}, onPick, mode 
                                   !isFirst && "border-t border-zinc-100",
                                 ].join(" ")}
                               >
-                                TBD
+                                A definir
                               </div>
                             );
                           }

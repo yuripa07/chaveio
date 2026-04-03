@@ -21,10 +21,10 @@ function req(method: string, path: string, body?: unknown, token?: string | null
 
 type CreateTournamentBody = {
   name?: string;
-  theme?: string;
   items?: string[];
   creatorName?: string;
   creatorPassword?: string;
+  roundNames?: string[];
 };
 
 export async function createTournament(body: CreateTournamentBody = {}) {
@@ -32,10 +32,10 @@ export async function createTournament(body: CreateTournamentBody = {}) {
   return POST(
     req("POST", "/api/tournaments", {
       name: body.name ?? "Best Country",
-      theme: body.theme ?? "Geography",
       items: body.items ?? ["Brazil", "Japan", "Germany", "France"],
       creatorName: body.creatorName ?? "Alice",
       creatorPassword: body.creatorPassword ?? "pass123",
+      roundNames: body.roundNames,
     })
   );
 }
