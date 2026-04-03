@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Tournament {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  theme     String
+  status    String    @default("LOBBY")
+  createdAt DateTime  @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  items        TournamentItem[]
+  participants Participant[]
+  matches      Match[]
+  rounds       Round[]
+}
+
+model TournamentItem {
+  id           String @id @default(cuid())
+  tournamentId String
+  name         String
+  seed         Int
+
+  tournament Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matchSlots MatchSlot[]
+  picks      Pick[]
+}
+
+model Participant {
+  id                String  @id @default(cuid())
+  tournamentId      String
+  displayName       String
+  passwordHash      String
+  isCreator         Boolean @default(false)
+  hasSubmittedPicks Boolean @default(false)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  picks      Pick[]
+
+  @@unique([tournamentId, displayName])
+}
+
+model Round {
+  id           String @id @default(cuid())
+  tournamentId String
+  roundNumber  Int
+  status       String @default("PENDING")
+  pointValue   Int
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches    Match[]
+
+  @@unique([tournamentId, roundNumber])
+}
+
+model Match {
+  id           String  @id @default(cuid())
+  tournamentId String
+  roundId      String
+  matchNumber  Int
+  status       String  @default("PENDING")
+  winnerId     String?
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round      Round      @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  slots      MatchSlot[]
+  picks      Pick[]
+
+  @@unique([roundId, matchNumber])
+}
+
+model MatchSlot {
+  id       String @id @default(cuid())
+  matchId  String
+  itemId   String
+  position Int
+
+  match Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  item  TournamentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, position])
+}
+
+model Pick {
+  id            String   @id @default(cuid())
+  participantId String
+  matchId       String
+  pickedItemId  String
+  isCorrect     Boolean?
+  pointsEarned  Int      @default(0)
+
+  participant Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  match       Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  pickedItem  TournamentItem @relation(fields: [pickedItemId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, matchId])
+}
