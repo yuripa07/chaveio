@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/yuri/.nvm/**)",
+      "Read(//home/yuri/**)",
+      "Read(//usr/bin/**)"
+    ]
+  }
+}
