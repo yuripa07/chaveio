@@ -1,16 +1,10 @@
-// src/lib/db.ts
-import { PrismaClient } from "@/generated/prisma/client"; 
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client"; // <-- Add this import!
+import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 export function createPrisma(url?: string) {
-  const dbUrl = url ?? process.env.DATABASE_URL;
-  if (!dbUrl || dbUrl === "undefined") throw new Error("DATABASE_URL is not set");
-
-  
-  // 2. Pass the client to the adapter
-  const adapter = new PrismaLibSql({ url: dbUrl });
-
+  const connectionString = url ?? process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is not set");
+  const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
 
