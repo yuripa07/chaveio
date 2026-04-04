@@ -24,7 +24,7 @@ export function RankingsTable({ rankings, currentParticipantId }: RankingsTableP
             return (
               <tr key={entry.participantId} className={isCurrentUser ? "bg-indigo-50" : ""}>
                 <td className="px-4 py-3 text-sm font-bold text-zinc-400">{entry.rank}</td>
-                <td className={cn("px-4 py-3", isCurrentUser ? "font-semibold text-indigo-700" : "text-zinc-800")}>
+                <td className={cn("max-w-0 truncate px-4 py-3", isCurrentUser ? "font-semibold text-indigo-700" : "text-zinc-800")}>
                   {entry.displayName}
                   {isCurrentUser && " (você)"}
                 </td>

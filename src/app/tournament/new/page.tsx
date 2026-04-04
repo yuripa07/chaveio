@@ -130,6 +130,7 @@ export default function NewTournament() {
                 onChange={(event) => setName(event.target.value)}
                 required
                 autoFocus
+                autoComplete="off"
                 placeholder="Ex: Copa do Mundo, Oscar 2025…"
                 className={INPUT_CLASS}
               />
@@ -219,6 +220,7 @@ export default function NewTournament() {
                     value={creatorName}
                     onChange={(event) => setCreatorName(event.target.value)}
                     required
+                    autoComplete="name"
                     placeholder="Seu nome"
                     className={INPUT_CLASS}
                   />
@@ -230,6 +232,7 @@ export default function NewTournament() {
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       required
+                      autoComplete="new-password"
                       placeholder="••••••"
                       className={cn(INPUT_CLASS, "pr-10")}
                     />
@@ -251,7 +254,7 @@ export default function NewTournament() {
             <button
               type="submit"
               disabled={loading || !isValidCount}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
                 <>

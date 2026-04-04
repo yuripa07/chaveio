@@ -74,7 +74,7 @@ export default function Home() {
           <div className="space-y-3">
             <Link
               href="/tournament/new"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition"
             >
               <PlusCircle className="h-4 w-4" />
               Criar torneio
@@ -116,7 +116,7 @@ export default function Home() {
                   {code.length > 0 && !codeComplete && !codeError && (
                     <div className="absolute bottom-0 left-4 right-4 h-0.5 overflow-hidden rounded-full bg-zinc-100">
                       <div
-                        className="h-full bg-indigo-400 transition-all duration-200"
+                        className="h-full bg-indigo-400 transition-[width] duration-200"
                         style={{ width: `${codeProgress * 100}%` }}
                       />
                     </div>
@@ -147,7 +147,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={joining || !codeComplete}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[.98] transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[.98] transition disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {joining ? (
                   <>
