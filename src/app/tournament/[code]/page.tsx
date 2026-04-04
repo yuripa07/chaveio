@@ -5,26 +5,20 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { decodeTokenPayload } from "@/lib/token-client";
 import { getStoredToken, setStoredToken } from "@/lib/token-storage";
-import Spinner from "@/components/Spinner";
-
-type Participant = {
-  id: string;
-  displayName: string;
-  isCreator: boolean;
-  hasSubmittedPicks: boolean;
-};
-
-type TournamentData = {
-  tournament: { id: string; code: string; name: string; theme: string; status: string };
-  participants: Participant[];
-  items: { id: string; name: string; seed: number }[];
-};
+import { cn } from "@/lib/cn";
+import { INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/constants/styles";
+import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
+import { BackLink } from "@/components/back-link";
+import { ErrorAlert } from "@/components/error-alert";
+import { LobbyCTA } from "@/components/lobby-cta";
+import { PageSpinner } from "@/components/page-spinner";
+import type { Participant, TournamentState } from "@/types/tournament";
 
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
 
-  const [data, setData] = useState<TournamentData | null>(null);
+  const [tournamentData, setTournamentData] = useState<TournamentState | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [joinName, setJoinName] = useState("");
@@ -33,12 +27,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
 
-  const fetchState = useCallback(async (tok: string) => {
-    const res = await fetch(`/api/tournaments/${code}`, {
-      headers: { Authorization: `Bearer ${tok}` },
+  const fetchState = useCallback(async (token: string) => {
+    const response = await fetch(`/api/tournaments/${code}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return null;
-    return (await res.json()) as TournamentData;
+    if (!response.ok) return null;
+    return (await response.json()) as TournamentState;
   }, [code]);
 
   useEffect(() => {
@@ -47,51 +41,51 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     setToken(stored);
     const creator = decodeTokenPayload(stored)?.isCreator ?? false;
     setIsCreator(creator);
-    fetchState(stored).then((d) => {
-      if (!d) return;
-      setData(d);
-      if (d.tournament.status === "ACTIVE")
+    fetchState(stored).then((tournamentData) => {
+      if (!tournamentData) return;
+      setTournamentData(tournamentData);
+      if (tournamentData.tournament.status === TournamentStatus.ACTIVE)
         router.replace(creator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`);
-      else if (d.tournament.status === "FINISHED")
+      else if (tournamentData.tournament.status === TournamentStatus.FINISHED)
         router.replace(`/tournament/${code}/results`);
     });
   }, [code, fetchState, router]);
 
   useEffect(() => {
-    if (!token || data?.tournament.status !== "LOBBY") return;
+    if (!token || tournamentData?.tournament.status !== TournamentStatus.LOBBY) return;
     const interval = setInterval(() => {
-      fetchState(token).then((d) => {
-        if (!d) return;
-        setData(d);
-        if (d.tournament.status === "ACTIVE") {
+      fetchState(token).then((tournamentData) => {
+        if (!tournamentData) return;
+        setTournamentData(tournamentData);
+        if (tournamentData.tournament.status === TournamentStatus.ACTIVE) {
           clearInterval(interval);
           router.replace(isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`);
-        } else if (d.tournament.status === "FINISHED") {
+        } else if (tournamentData.tournament.status === TournamentStatus.FINISHED) {
           clearInterval(interval);
           router.replace(`/tournament/${code}/results`);
         }
       });
-    }, 3000);
+    }, POLL_INTERVAL_LOBBY);
     return () => clearInterval(interval);
-  }, [token, data?.tournament.status, fetchState, code, router, isCreator]);
+  }, [token, tournamentData?.tournament.status, fetchState, code, router, isCreator]);
 
-  async function handleJoin(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleJoin(event: React.FormEvent) {
+    event.preventDefault();
     setJoinError("");
     setJoining(true);
     try {
-      const res = await fetch(`/api/tournaments/${code}/join`, {
+      const response = await fetch(`/api/tournaments/${code}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ displayName: joinName, password: joinPassword }),
       });
-      const body = await res.json();
-      if (!res.ok) { setJoinError(body.error ?? "Falha ao entrar"); return; }
+      const body = await response.json();
+      if (!response.ok) { setJoinError(body.error ?? "Falha ao entrar"); return; }
       setStoredToken(code, body.token);
       setToken(body.token);
       setIsCreator(decodeTokenPayload(body.token)?.isCreator ?? false);
-      const d = await fetchState(body.token);
-      if (d) setData(d);
+      const tournamentData = await fetchState(body.token);
+      if (tournamentData) setTournamentData(tournamentData);
     } catch {
       setJoinError("Erro de rede");
     } finally {
@@ -103,11 +97,11 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     if (!token) return;
     setStarting(true);
     try {
-      const res = await fetch(`/api/tournaments/${code}/start`, {
+      const response = await fetch(`/api/tournaments/${code}/start`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) router.replace(`/tournament/${code}/live`);
+      if (response.ok) router.replace(`/tournament/${code}/live`);
     } finally {
       setStarting(false);
     }
@@ -118,12 +112,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     return (
       <main className="flex min-h-screen flex-col bg-zinc-50">
         <div className="border-b border-zinc-100 bg-white px-6 py-4">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
-            <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-              <path d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06z" />
-            </svg>
-            Início
-          </Link>
+          <BackLink href="/" label="Início" />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
@@ -131,34 +120,32 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-100">
                 {code}
               </span>
-              <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Join tournament</h1>
+              <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Entrar no torneio</h1>
               <p className="mt-1 text-sm text-zinc-500">Digite seu nome e senha para entrar.</p>
             </div>
             <form onSubmit={handleJoin} className="space-y-3">
               <input
                 type="text"
-                placeholder="Your name"
+                placeholder="Seu nome"
                 value={joinName}
-                onChange={(e) => setJoinName(e.target.value)}
+                onChange={(event) => setJoinName(event.target.value)}
                 required
                 autoFocus
-                className={inp}
+                className={cn(INPUT_CLASS, "px-4 py-3")}
               />
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="Senha"
                 value={joinPassword}
-                onChange={(e) => setJoinPassword(e.target.value)}
+                onChange={(event) => setJoinPassword(event.target.value)}
                 required
-                className={inp}
+                className={cn(INPUT_CLASS, "px-4 py-3")}
               />
-              {joinError && (
-                <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{joinError}</p>
-              )}
+              {joinError && <ErrorAlert message={joinError} />}
               <button
                 type="submit"
                 disabled={joining}
-                className={btnPrimary}
+                className={PRIMARY_BUTTON_CLASS}
               >
                 {joining ? "Entrando…" : "Entrar no torneio"}
               </button>
@@ -169,19 +156,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     );
   }
 
-  if (!data) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <Spinner />
-      </main>
-    );
-  }
+  if (!tournamentData) return <PageSpinner />;
 
-  const { tournament, participants, items } = data;
+  const { tournament, participants, items } = tournamentData;
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
-      {/* Header */}
       <div className="border-b border-zinc-100 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <Link href="/" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
@@ -195,7 +175,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
       <div className="flex flex-1 justify-center px-6 py-10">
         <div className="w-full max-w-2xl space-y-6">
-          {/* Tournament title */}
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">{tournament.name}</h1>
@@ -213,20 +192,20 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 Participantes · {participants.length}
               </h2>
               <ul className="space-y-2">
-                {participants.map((p) => (
-                  <li key={p.id} className="flex items-center gap-2">
+                {participants.map((participant: Participant) => (
+                  <li key={participant.id} className="flex items-center gap-2">
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">
-                      {p.displayName[0].toUpperCase()}
+                      {participant.displayName[0].toUpperCase()}
                     </div>
-                    <span className="flex-1 text-sm font-medium">{p.displayName}</span>
+                    <span className="flex-1 text-sm font-medium">{participant.displayName}</span>
                     <div className="flex items-center gap-1.5">
-                      {p.isCreator && (
+                      {participant.isCreator && (
                         <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
                           criador
                         </span>
                       )}
-                      {p.hasSubmittedPicks && (
-                        <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-emerald-500">
+                      {participant.hasSubmittedPicks && (
+                        <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 text-emerald-500">
                           <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
                         </svg>
                       )}
@@ -254,8 +233,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             </div>
           </div>
 
-          {/* CTA */}
-          {tournament.status === "LOBBY" && (
+          {tournament.status === TournamentStatus.LOBBY && (
             <LobbyCTA
               code={code}
               participants={participants}
@@ -269,63 +247,3 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     </main>
   );
 }
-
-function LobbyCTA({
-  code,
-  participants,
-  isCreator,
-  starting,
-  onStart,
-}: {
-  code: string;
-  participants: Participant[];
-  isCreator: boolean;
-  starting: boolean;
-  onStart: () => void;
-}) {
-  const allReady = participants.every((p) => p.hasSubmittedPicks);
-  const notReady = participants.filter((p) => !p.hasSubmittedPicks);
-
-  return (
-    <div className="space-y-3">
-      <Link
-        href={`/tournament/${code}/bracket`}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
-      >
-        Fazer palpites →
-      </Link>
-      {isCreator && (
-        <>
-          {!allReady && (
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              Aguardando palpites de: {notReady.map((p) => p.displayName).join(", ")}
-            </div>
-          )}
-          <button
-            onClick={onStart}
-            disabled={starting || !allReady}
-            className={btnPrimary}
-          >
-            {starting ? "Iniciando…" : "Iniciar torneio"}
-          </button>
-        </>
-      )}
-      {!isCreator && (
-        <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-zinc-100 bg-white py-4 text-sm text-zinc-500 shadow-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-          </span>
-          Aguardando o criador iniciar…
-        </div>
-      )}
-    </div>
-  );
-}
-
-const inp =
-  "w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition";
-
-const btnPrimary =
-  "w-full rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed";
-

@@ -2,30 +2,22 @@
 
 import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { decodeTokenPayload } from "@/lib/token-client";
 import { getStoredToken } from "@/lib/token-storage";
-import Link from "next/link";
-import Spinner from "@/components/Spinner";
+import { TournamentStatus } from "@/constants/tournament";
+import { TournamentHeader } from "@/components/tournament-header";
+import { PageSpinner } from "@/components/page-spinner";
+import { ErrorAlert } from "@/components/error-alert";
+import { InfoBanner } from "@/components/info-banner";
+import { PulseDot } from "@/components/pulse-dot";
+import { RankingsTable } from "@/components/rankings-table";
 import dynamic from "next/dynamic";
+import type { TournamentState, ItemMap, RankEntry } from "@/types/tournament";
 
 const BracketView = dynamic(() => import("@/components/BracketView"), {
   loading: () => <div className="h-64 animate-pulse rounded-2xl bg-zinc-100" />,
 });
-
-type Item = { id: string; name: string; seed: number };
-type Slot = { id: string; itemId: string; position: number };
-type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
-type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
-
-type Participant = { id: string; displayName: string; hasSubmittedPicks: boolean };
-type RankEntry = { participantId: string; displayName: string; totalPoints: number; rank: number };
-
-type TournamentState = {
-  tournament: { id: string; code: string; name: string; status: string };
-  items: Item[];
-  rounds: Round[];
-  participants: Participant[];
-};
 
 export default function LivePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -37,14 +29,16 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   const [resolving, setResolving] = useState<string | null>(null);
   const [winnerError, setWinnerError] = useState("");
 
-  const loadState = useCallback(async (tok: string) => {
-    const [tRes, rRes] = await Promise.all([
-      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
-      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${tok}` } }),
+  const loadState = useCallback(async (token: string) => {
+    const [tournamentResponse, rankingsResponse] = await Promise.all([
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${token}` } }),
     ]);
-    if (!tRes.ok) return null;
-    const rankingsData: RankEntry[] = rRes.ok ? (await rRes.json()).rankings ?? [] : [];
-    return { state: (await tRes.json()) as TournamentState, rankings: rankingsData };
+    if (!tournamentResponse.ok) return null;
+    const rankingsData: RankEntry[] = rankingsResponse.ok
+      ? (await rankingsResponse.json()).rankings ?? []
+      : [];
+    return { state: (await tournamentResponse.json()) as TournamentState, rankings: rankingsData };
   }, [code]);
 
   useEffect(() => {
@@ -54,7 +48,10 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     setToken(stored);
     loadState(stored).then((result) => {
       if (!result) return;
-      if (result.state.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
+      if (result.state.tournament.status === TournamentStatus.FINISHED) {
+        router.replace(`/tournament/${code}/results`);
+        return;
+      }
       setState(result.state);
       setRankings(result.rankings);
     });
@@ -65,19 +62,22 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     setResolving(matchId);
     setWinnerError("");
     try {
-      const res = await fetch(`/api/tournaments/${code}/matches/${matchId}/winner`, {
+      const response = await fetch(`/api/tournaments/${code}/matches/${matchId}/winner`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ winnerId }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
         setWinnerError(body.error ?? "Erro ao salvar vencedor");
         return;
       }
       const result = await loadState(token);
       if (!result) return;
-      if (result.state.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
+      if (result.state.tournament.status === TournamentStatus.FINISHED) {
+        router.replace(`/tournament/${code}/results`);
+        return;
+      }
       setState(result.state);
       setRankings(result.rankings);
     } finally {
@@ -86,70 +86,52 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   }
 
   const itemMap = useMemo(
-    () => Object.fromEntries((state?.items ?? []).map((it) => [it.id, it])),
+    () => Object.fromEntries((state?.items ?? []).map((item) => [item.id, item])) as ItemMap,
     [state?.items]
   );
 
-  if (!state) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <Spinner />
-      </main>
-    );
-  }
+  if (!state) return <PageSpinner />;
 
-  const activeRound = state.rounds.find((r) => r.status === "ACTIVE");
-  const pendingInRound = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
-  const pendingPicks = state.participants.filter((p) => !p.hasSubmittedPicks);
+  const activeRound = state.rounds.find((round) => round.status === TournamentStatus.ACTIVE);
+  const pendingMatches = activeRound?.matches.filter((match) => match.status !== "COMPLETE") ?? [];
+  const pendingParticipants = state.participants.filter((participant) => !participant.hasSubmittedPicks);
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
-      {/* Header */}
-      <div className="border-b border-zinc-100 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <div>
-            <span className="font-mono text-xs font-semibold tracking-widest text-zinc-400">{code}</span>
-            <h1 className="text-base font-extrabold leading-tight tracking-tight">{state.tournament.name}</h1>
-          </div>
+      <TournamentHeader
+        code={code}
+        name={state.tournament.name}
+        rightSlot={
           <Link
             href={`/tournament/${code}/results`}
             className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
           >
             Placar →
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-8 px-6 py-8">
 
-        {/* Warning: pending picks */}
-        {pendingPicks.length > 0 && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3.5 text-sm text-amber-700">
+        {pendingParticipants.length > 0 && (
+          <InfoBanner variant="warning">
             <svg viewBox="0 0 16 16" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0">
               <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1Zm0 3.5a.75.75 0 0 0-.75.75v3a.75.75 0 0 0 1.5 0v-3A.75.75 0 0 0 8 4.5Zm0 6a.875.875 0 1 0 0-1.75.875.875 0 0 0 0 1.75Z" />
             </svg>
             <span>
-              Aguardando palpites de: <strong>{pendingPicks.map((p) => p.displayName).join(", ")}</strong>.
+              Aguardando palpites de:{" "}
+              <strong>{pendingParticipants.map((participant) => participant.displayName).join(", ")}</strong>.
               Não é possível resolver partidas até que todos enviem seus palpites.
             </span>
-          </div>
+          </InfoBanner>
         )}
 
-        {/* Error from winner API */}
-        {winnerError && (
-          <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-3 text-sm text-red-600">
-            {winnerError}
-          </div>
-        )}
+        {winnerError && <ErrorAlert message={winnerError} className="rounded-2xl border border-red-100 px-5 py-3" />}
 
-        {/* Active round: big match cards */}
-        {activeRound && pendingInRound.length > 0 && (
+        {activeRound && pendingMatches.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
-              </span>
+              <PulseDot color="indigo" size="md" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500">
                 {activeRound.name
                   ? `${activeRound.name} · ${activeRound.pointValue} pts`
@@ -159,10 +141,10 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {pendingInRound.map((match) => {
+              {pendingMatches.map((match) => {
                 const item1 = match.slots[0] ? itemMap[match.slots[0].itemId] : null;
                 const item2 = match.slots[1] ? itemMap[match.slots[1].itemId] : null;
-                const busy = resolving === match.id;
+                const isBusy = resolving === match.id;
 
                 return (
                   <div
@@ -173,17 +155,17 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                       Partida {match.matchNumber}
                     </p>
                     <div className="flex divide-x divide-zinc-100">
-                      {[item1, item2].map((item, idx) => {
+                      {[item1, item2].map((item, index) => {
                         if (!item)
                           return (
-                            <div key={idx} className="flex flex-1 items-center justify-center py-6 text-xs text-zinc-300">
+                            <div key={index} className="flex flex-1 items-center justify-center py-6 text-xs text-zinc-300">
                               A definir
                             </div>
                           );
                         return (
                           <button
                             key={item.id}
-                            disabled={busy}
+                            disabled={isBusy}
                             onClick={() => setWinner(match.id, item.id)}
                             className="group flex flex-1 flex-col items-center gap-1.5 px-4 py-5 text-center hover:bg-indigo-600 hover:text-white active:scale-[.97] transition-all disabled:opacity-50"
                           >
@@ -195,7 +177,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                         );
                       })}
                     </div>
-                    {busy && (
+                    {isBusy && (
                       <div className="border-t border-zinc-100 py-2 text-center text-xs text-zinc-400">
                         Salvando…
                       </div>
@@ -207,42 +189,20 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
           </section>
         )}
 
-        {/* Full bracket */}
         <section className="space-y-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Chaveamento</h2>
-          <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
             <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
           </div>
         </section>
 
-        {/* Rankings table */}
         {rankings.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking atual</h2>
-            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-100 text-left">
-                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400">#</th>
-                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400">Nome</th>
-                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400 text-right">Pontos</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                  {rankings.map((entry) => (
-                    <tr key={entry.participantId}>
-                      <td className="px-4 py-3 text-sm font-bold text-zinc-400">{entry.rank}</td>
-                      <td className="px-4 py-3 text-zinc-800">{entry.displayName}</td>
-                      <td className="px-4 py-3 text-right font-bold text-zinc-800">{entry.totalPoints}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <RankingsTable rankings={rankings} />
           </section>
         )}
       </div>
     </main>
   );
 }
-

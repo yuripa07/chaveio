@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 
 export default function Home() {
   const router = useRouter();
   const [code, setCode] = useState("");
 
-  function handleJoin(e: React.FormEvent) {
-    e.preventDefault();
+  function handleJoin(event: React.FormEvent) {
+    event.preventDefault();
     const trimmed = code.trim().toUpperCase();
-    if (trimmed.length === 6) router.push(`/tournament/${trimmed}`);
+    if (trimmed.length === TOURNAMENT_CODE_LENGTH) router.push(`/tournament/${trimmed}`);
   }
 
   return (
@@ -54,15 +55,15 @@ export default function Home() {
                 type="text"
                 placeholder="ABC123"
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""))}
-                maxLength={6}
+                onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""))}
+                maxLength={TOURNAMENT_CODE_LENGTH}
                 spellCheck={false}
                 autoComplete="off"
                 className="w-full rounded-2xl border border-zinc-200 bg-white px-5 py-3.5 text-center text-xl font-mono font-bold tracking-[0.3em] uppercase placeholder:font-normal placeholder:tracking-widest placeholder:text-zinc-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
               />
               <button
                 type="submit"
-                disabled={code.length !== 6}
+                disabled={code.length !== TOURNAMENT_CODE_LENGTH}
                 className="w-full rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[.98] transition-all disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Entrar no torneio
