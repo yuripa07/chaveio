@@ -7,9 +7,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string; id: string }> }
 ) {
+  // Start independent operations in parallel
+  const authPromise = requireCreator(req);
+  const bodyPromise = req.json().catch(() => null);
+  const paramsPromise = params;
+
   let payload;
   try {
-    payload = await requireCreator(req);
+    payload = await authPromise;
   } catch (e) {
     if (e instanceof AuthError) {
       return Response.json({ error: e.message }, { status: e.status });
@@ -17,12 +22,9 @@ export async function POST(
     throw e;
   }
 
-  const { code, id: matchId } = await params;
+  const [body, { code, id: matchId }] = await Promise.all([bodyPromise, paramsPromise]);
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
+  if (!body) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { setStoredToken } from "@/lib/token-storage";
 
 const VALID_COUNTS = [4, 8, 16, 32];
 
@@ -81,7 +82,7 @@ export default function NewTournament() {
       });
       const body = await res.json();
       if (!res.ok) { setError(body.error ?? "Algo deu errado"); return; }
-      localStorage.setItem(`chaveio_token_${body.code}`, body.token);
+      setStoredToken(body.code, body.token);
       router.push(`/tournament/${body.code}`);
     } catch {
       setError("Erro de rede");

@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(creatorPassword, 10);
+  // Start hash immediately, generate code in parallel
+  const hashPromise = bcrypt.hash(creatorPassword, 10);
 
-  // Generate unique code (retry on collision)
   let code = "";
   for (let i = 0; i < 5; i++) {
     const candidate = generateCode();
@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
   if (!code) {
     return Response.json({ error: "Failed to generate unique code" }, { status: 500 });
   }
+
+  const passwordHash = await hashPromise;
 
   const tournament = await prisma.$transaction(async (tx) => {
     const t = await tx.tournament.create({

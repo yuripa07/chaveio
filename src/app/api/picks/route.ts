@@ -54,12 +54,14 @@ export async function POST(req: NextRequest) {
   });
 
   // Block updates to already-scored picks
-  const completedMatchIds = tournament.rounds
-    .flatMap((r) => r.matches)
-    .filter((m) => m.status === "COMPLETE")
-    .map((m) => m.id);
+  const completedMatchIds = new Set(
+    tournament.rounds
+      .flatMap((r) => r.matches)
+      .filter((m) => m.status === "COMPLETE")
+      .map((m) => m.id)
+  );
 
-  const attemptedOnComplete = picks.filter((p) => completedMatchIds.includes(p.matchId));
+  const attemptedOnComplete = picks.filter((p) => completedMatchIds.has(p.matchId));
   if (attemptedOnComplete.length > 0) {
     return Response.json(
       { error: "Cannot change picks for already-resolved matches" },

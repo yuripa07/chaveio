@@ -4,6 +4,8 @@ import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { decodeTokenPayload } from "@/lib/token-client";
+import { getStoredToken, setStoredToken } from "@/lib/token-storage";
+import Spinner from "@/components/Spinner";
 
 type Participant = {
   id: string;
@@ -40,7 +42,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   }, [code]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(`chaveio_token_${code}`);
+    const stored = getStoredToken(code);
     if (!stored) return;
     setToken(stored);
     const creator = decodeTokenPayload(stored)?.isCreator ?? false;
@@ -85,7 +87,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       });
       const body = await res.json();
       if (!res.ok) { setJoinError(body.error ?? "Falha ao entrar"); return; }
-      localStorage.setItem(`chaveio_token_${code}`, body.token);
+      setStoredToken(code, body.token);
       setToken(body.token);
       setIsCreator(decodeTokenPayload(body.token)?.isCreator ?? false);
       const d = await fetchState(body.token);
@@ -253,48 +255,71 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           </div>
 
           {/* CTA */}
-          {tournament.status === "LOBBY" && (() => {
-            const allReady = participants.every((p) => p.hasSubmittedPicks);
-            const notReady = participants.filter((p) => !p.hasSubmittedPicks);
-            return (
-              <div className="space-y-3">
-                <Link
-                  href={`/tournament/${code}/bracket`}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
-                >
-                  Fazer palpites →
-                </Link>
-                {isCreator && (
-                  <>
-                    {!allReady && (
-                      <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                        Aguardando palpites de: {notReady.map((p) => p.displayName).join(", ")}
-                      </div>
-                    )}
-                    <button
-                      onClick={handleStart}
-                      disabled={starting || !allReady}
-                      className={btnPrimary}
-                    >
-                      {starting ? "Iniciando…" : "Iniciar torneio"}
-                    </button>
-                  </>
-                )}
-                {!isCreator && (
-                  <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-zinc-100 bg-white py-4 text-sm text-zinc-500 shadow-sm">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-                    </span>
-                    Aguardando o criador iniciar…
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+          {tournament.status === "LOBBY" && (
+            <LobbyCTA
+              code={code}
+              participants={participants}
+              isCreator={isCreator}
+              starting={starting}
+              onStart={handleStart}
+            />
+          )}
         </div>
       </div>
     </main>
+  );
+}
+
+function LobbyCTA({
+  code,
+  participants,
+  isCreator,
+  starting,
+  onStart,
+}: {
+  code: string;
+  participants: Participant[];
+  isCreator: boolean;
+  starting: boolean;
+  onStart: () => void;
+}) {
+  const allReady = participants.every((p) => p.hasSubmittedPicks);
+  const notReady = participants.filter((p) => !p.hasSubmittedPicks);
+
+  return (
+    <div className="space-y-3">
+      <Link
+        href={`/tournament/${code}/bracket`}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
+      >
+        Fazer palpites →
+      </Link>
+      {isCreator && (
+        <>
+          {!allReady && (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Aguardando palpites de: {notReady.map((p) => p.displayName).join(", ")}
+            </div>
+          )}
+          <button
+            onClick={onStart}
+            disabled={starting || !allReady}
+            className={btnPrimary}
+          >
+            {starting ? "Iniciando…" : "Iniciar torneio"}
+          </button>
+        </>
+      )}
+      {!isCreator && (
+        <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-zinc-100 bg-white py-4 text-sm text-zinc-500 shadow-sm">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+          </span>
+          Aguardando o criador iniciar…
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -304,11 +329,3 @@ const inp =
 const btnPrimary =
   "w-full rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed";
 
-function Spinner() {
-  return (
-    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}

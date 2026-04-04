@@ -9,7 +9,7 @@ March Madness-style bracket prediction app for team bonding events. Before each 
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 16 (App Router) + TypeScript |
-| Styles | Tailwind CSS |
+| Styles | Tailwind CSS 4 |
 | Database | SQLite (dev) / PostgreSQL Neon (prod) |
 | ORM | Prisma 7 |
 | Auth | JWT per tournament via `jose` — name + password, no global account |
@@ -54,30 +54,42 @@ src/
 │       │   └── matches/[id]/winner/route.ts  # POST set winner (creator)
 │       └── picks/route.ts              # GET/POST picks
 ├── lib/
-│   ├── points.ts     # computeRoundPoints, computeMaxPoints
-│   ├── bracket.ts    # seedPositions, generateFirstRoundPairs, getNextRoundSlot
-│   ├── codes.ts      # generateCode (6-char uppercase, no ambiguous chars)
-│   ├── db.ts         # PrismaClient singleton
-│   └── auth.ts       # signToken, verifyToken, requireParticipant, requireCreator
+│   ├── points.ts            # computeRoundPoints, computeMaxPoints
+│   ├── bracket.ts           # seedPositions, generateFirstRoundPairs, getNextRoundSlot
+│   ├── codes.ts             # generateCode (6-char uppercase, no ambiguous chars)
+│   ├── db.ts                # PrismaClient singleton
+│   ├── auth.ts              # signToken, verifyToken, requireParticipant, requireCreator
+│   ├── picks-validation.ts  # validateBracketPicks
+│   └── token-client.ts      # Client-side JWT decode (no verification)
+├── components/
+│   └── BracketView.tsx      # Reusable bracket visualization component
 └── generated/
-    └── prisma/       # auto-generated, gitignored
+    └── prisma/              # auto-generated, gitignored
 
 tests/
 ├── unit/
 │   ├── points.test.ts
 │   ├── bracket.test.ts
-│   └── codes.test.ts
-└── integration/      # phase 2+
+│   ├── codes.test.ts
+│   └── picks-validation.test.ts
+└── integration/
+    ├── fixtures.ts
+    ├── globalSetup.ts
+    ├── helpers.ts
+    ├── tournaments.test.ts
+    ├── picks.test.ts
+    ├── lifecycle.test.ts
+    └── late-joiner.test.ts
 ```
 
 ## Database Models
 
-`Tournament` → `TournamentItem[]`, `Participant[]`, `Round[]`, `Match[]`  
-`Round` → `Match[]` (has pre-computed `pointValue`)  
-`Match` → `MatchSlot[]` (2 slots per match), `Pick[]`  
-`Pick` → belongs to `Participant` + `Match`; `isCorrect` is null until match resolves  
+`Tournament` -> `TournamentItem[]`, `Participant[]`, `Round[]`, `Match[]`
+`Round` -> `Match[]` (has pre-computed `pointValue`)
+`Match` -> `MatchSlot[]` (2 slots per match), `Pick[]`
+`Pick` -> belongs to `Participant` + `Match`; `isCorrect` is null until match resolves
 
-**Status enums (stored as strings in SQLite):**
+**Status enums (stored as strings):**
 - Tournament: `LOBBY` | `ACTIVE` | `FINISHED`
 - Round: `PENDING` | `ACTIVE` | `COMPLETE`
 - Match: `PENDING` | `COMPLETE`
@@ -90,15 +102,15 @@ For N items and `totalRounds = log2(N)`:
 - Rounds 1 to (totalRounds - 1): `pointValue = 2^(roundNumber - 1)`
 - **Final round: `pointValue = N`** (breaks geometric progression intentionally)
 
-Example for 16 items: 1 → 2 → 4 → **16** pts; max score = **40 pts**
+Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max score = **40 pts**
 
 See `src/lib/points.ts` for implementation.
 
 ## Bracket Seeding
 
 `seedPositions(n)` returns seeds in bracket order using alternating complement pairing:
-- n=4 → `[1, 4, 3, 2]` (matches: 1v4, 3v2)
-- n=8 → `[1, 8, 5, 4, 3, 6, 7, 2]`
+- n=4 -> `[1, 4, 3, 2]` (matches: 1v4, 3v2)
+- n=8 -> `[1, 8, 5, 4, 3, 6, 7, 2]`
 
 When match M resolves, the winner advances to:
 - `matchIndex = Math.floor((M - 1) / 2)`
@@ -108,8 +120,8 @@ See `src/lib/bracket.ts` for implementation.
 
 ## Auth
 
-JWT payload: `{ participantId, tournamentId, isCreator }`  
-Signed with `JWT_SECRET` env var. Stored in `localStorage` on the client.  
+JWT payload: `{ participantId, tournamentId, isCreator }`
+Signed with `JWT_SECRET` env var. Stored in `localStorage` on the client.
 Header: `Authorization: Bearer <token>`
 
 Use `requireParticipant(req)` or `requireCreator(req)` from `src/lib/auth.ts` in API routes. Both throw `AuthError` (with HTTP status) on failure.
@@ -118,26 +130,50 @@ Use `requireParticipant(req)` or `requireCreator(req)` from `src/lib/auth.ts` in
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/tournaments` | — | Create tournament, returns creator token |
+| POST | `/api/tournaments` | -- | Create tournament, returns creator token |
 | GET | `/api/tournaments/[code]` | Token | Tournament state (picks filtered to own) |
-| POST | `/api/tournaments/[code]/join` | — | Join tournament, returns token |
-| POST | `/api/tournaments/[code]/start` | Creator | Generate rounds/matches, activate round 1 |
+| POST | `/api/tournaments/[code]/join` | -- | Join tournament, returns token |
+| POST | `/api/tournaments/[code]/start` | Creator | Activate round 1, set status ACTIVE |
 | POST | `/api/tournaments/[code]/matches/[id]/winner` | Creator | Set winner, score picks, advance bracket |
 | POST | `/api/picks` | Token | Upsert all picks (atomic transaction) |
 | GET | `/api/picks` | Token | Return own picks |
 
 ## Implementation Phases
 
-- [x] **Phase 1** — Project setup, Prisma schema, TDD algorithms (points, bracket, codes)
-- [ ] **Phase 2** — Create/join APIs + picks API + landing/lobby/bracket UI
-- [ ] **Phase 3** — Start/winner APIs + live UI + leaderboard
-- [ ] **Phase 4** — Visual bracket component + mobile polish
-- [ ] **Phase 5** — Deploy to Neon + Vercel, CI green
+- [x] **Phase 1** -- Project setup, Prisma schema, TDD algorithms (points, bracket, codes)
+- [x] **Phase 2** -- Create/join APIs + picks API + landing/lobby/bracket UI
+- [x] **Phase 3** -- Start/winner APIs + live UI + leaderboard
+- [ ] **Phase 4** -- Visual bracket component + mobile polish
+- [ ] **Phase 5** -- Deploy to Neon + Vercel, CI green
 
 ## Conventions
 
 - All git commit messages in **English**
 - TDD: write tests before implementation for `src/lib/**` and `src/app/api/**`
 - Minimum 80% coverage on `src/lib/**` and `src/app/api/**`
-- No `npm` — always `pnpm`
+- No `npm` -- always `pnpm`
 - Prisma client is at `@/generated/prisma` (not `@prisma/client`)
+- UI strings in **pt-BR** (Portuguese Brazil)
+
+## Frontend Best Practices (Vercel React)
+
+See `docs/frontend-conventions.md` for detailed rules. Summary:
+
+1. **No waterfalls** -- Use `Promise.all()` for parallel fetches (already done in bracket/results)
+2. **Dynamic imports** -- Use `next/dynamic` for BracketView on secondary views
+3. **useMemo for derived data** -- `itemMap`, `augmentRounds`, `readOnlyRounds`
+4. **No inline components** -- Extract IIFEs and inline component definitions
+5. **Derive state during render** -- Don't use useEffect to sync derived state
+6. **Functional setState** -- Always use `setState(prev => ...)` when depending on previous state
+7. **localStorage try-catch** -- Wrap all localStorage access in try-catch
+8. **Extract shared components** -- Spinner, SVG icons used across pages
+9. **AbortController on polling** -- Cancel in-flight requests on unmount
+
+## Backend Best Practices (API Routes)
+
+See `docs/backend-conventions.md` for detailed rules. Summary:
+
+1. **Start promises early** -- `req.json()` and auth can begin in parallel
+2. **Use Set for lookups** -- Convert arrays to Set when checking membership
+3. **Combine iterations** -- Single loop instead of multiple filter/map chains
+4. **Consistent error handling** -- auth try-catch pattern with AuthError

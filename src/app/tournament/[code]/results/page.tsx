@@ -1,10 +1,16 @@
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { decodeTokenPayload } from "@/lib/token-client";
-import BracketView from "@/components/BracketView";
+import { getStoredToken } from "@/lib/token-storage";
+import Spinner from "@/components/Spinner";
+import dynamic from "next/dynamic";
+
+const BracketView = dynamic(() => import("@/components/BracketView"), {
+  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-zinc-100" />,
+});
 
 type Item = { id: string; name: string; seed: number };
 type Slot = { id: string; itemId: string; position: number };
@@ -41,7 +47,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   }, [code]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(`chaveio_token_${code}`);
+    const stored = getStoredToken(code);
     if (!stored) { router.replace(`/tournament/${code}`); return; }
     const payload = decodeTokenPayload(stored);
     setIsCreator(payload?.isCreator ?? false);
@@ -74,11 +80,20 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     );
   }
 
-  const itemMap = Object.fromEntries(state.items.map((it) => [it.id, it]));
-  const myPickMap = Object.fromEntries(myPicks.map((p) => [p.matchId, p]));
-  const myTotalPoints = myPicks.reduce((s, p) => s + p.pointsEarned, 0);
-  const resolvedCount = myPicks.filter((p) => p.isCorrect !== null).length;
-  const correctCount = myPicks.filter((p) => p.isCorrect).length;
+  const itemMap = useMemo(
+    () => Object.fromEntries(state.items.map((it) => [it.id, it])),
+    [state.items]
+  );
+  const myPickMap = useMemo(
+    () => Object.fromEntries(myPicks.map((p) => [p.matchId, p])),
+    [myPicks]
+  );
+  let myTotalPoints = 0, resolvedCount = 0, correctCount = 0;
+  for (const p of myPicks) {
+    myTotalPoints += p.pointsEarned;
+    if (p.isCorrect !== null) resolvedCount++;
+    if (p.isCorrect) correctCount++;
+  }
   const finished = state.tournament.status === "FINISHED";
 
   return (
@@ -252,11 +267,3 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Spinner() {
-  return (
-    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}

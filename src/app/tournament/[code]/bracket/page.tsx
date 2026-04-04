@@ -1,9 +1,11 @@
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { decodeTokenPayload } from "@/lib/token-client";
+import { getStoredToken } from "@/lib/token-storage";
 import BracketView from "@/components/BracketView";
+import Spinner from "@/components/Spinner";
 import { getFeederMatches, getNextRoundSlot } from "@/lib/bracket";
 
 type Item = { id: string; name: string; seed: number };
@@ -122,7 +124,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   );
 
   useEffect(() => {
-    const stored = localStorage.getItem(`chaveio_token_${code}`);
+    const stored = getStoredToken(code);
     if (!stored) { router.replace(`/tournament/${code}`); return; }
     const payload = decodeTokenPayload(stored);
     setToken(stored);
@@ -197,26 +199,38 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   // In ACTIVE and already submitted: read-only view
   const viewOnly = state.tournament.status === "ACTIVE" && alreadySubmitted;
 
-  const itemMap = Object.fromEntries((state.items ?? []).map((it) => [it.id, it]));
-
-  // Augment rounds with virtual slots for future rounds
-  const augmented = augmentRounds(state.rounds, picks, startRound);
-
-  // Rounds before startRound are read-only (for late joiners)
-  const readOnlyRounds = new Set(
-    state.rounds.filter((r) => r.roundNumber < startRound).map((r) => r.roundNumber)
+  const itemMap = useMemo(
+    () => Object.fromEntries((state.items ?? []).map((it) => [it.id, it])),
+    [state.items]
   );
 
-  // Required matches for this participant
-  const requiredMatches = augmented.filter((r) => r.roundNumber >= startRound).flatMap((r) => r.matches);
-  const pickedCount = requiredMatches.filter((m) => picks[m.id] && augmented
-    .find((r) => r.matches.some((mm) => mm.id === m.id))
-    ?.matches.find((mm) => mm.id === m.id)?.slots.length === 2
-  ).length;
-  const eligibleCount = requiredMatches.filter((m) => {
-    const match = augmented.find((r) => r.matches.some((mm) => mm.id === m.id))?.matches.find((mm) => mm.id === m.id);
-    return (match?.slots.length ?? 0) >= 2;
-  }).length;
+  // Augment rounds with virtual slots for future rounds
+  const augmented = useMemo(
+    () => augmentRounds(state.rounds, picks, startRound),
+    [state.rounds, picks, startRound]
+  );
+
+  // Rounds before startRound are read-only (for late joiners)
+  const readOnlyRounds = useMemo(
+    () => new Set(state.rounds.filter((r) => r.roundNumber < startRound).map((r) => r.roundNumber)),
+    [state.rounds, startRound]
+  );
+
+  // Required matches for this participant — single pass
+  const { pickedCount, eligibleCount } = useMemo(() => {
+    let picked = 0;
+    let eligible = 0;
+    for (const round of augmented) {
+      if (round.roundNumber < startRound) continue;
+      for (const match of round.matches) {
+        if (match.slots.length >= 2) {
+          eligible++;
+          if (picks[match.id]) picked++;
+        }
+      }
+    }
+    return { pickedCount: picked, eligibleCount: eligible };
+  }, [augmented, picks, startRound]);
   const allPicked = eligibleCount > 0 && pickedCount === eligibleCount;
 
   const mode = viewOnly ? "view" : "predict";
@@ -300,11 +314,3 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   );
 }
 
-function Spinner() {
-  return (
-    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}

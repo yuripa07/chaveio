@@ -1,10 +1,16 @@
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { decodeTokenPayload } from "@/lib/token-client";
+import { getStoredToken } from "@/lib/token-storage";
 import Link from "next/link";
-import BracketView from "@/components/BracketView";
+import Spinner from "@/components/Spinner";
+import dynamic from "next/dynamic";
+
+const BracketView = dynamic(() => import("@/components/BracketView"), {
+  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-zinc-100" />,
+});
 
 type Item = { id: string; name: string; seed: number };
 type Slot = { id: string; itemId: string; position: number };
@@ -36,7 +42,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   }, [code]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(`chaveio_token_${code}`);
+    const stored = getStoredToken(code);
     if (!stored) { router.replace(`/tournament/${code}`); return; }
     if (!decodeTokenPayload(stored)?.isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
     setToken(stored);
@@ -79,7 +85,10 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     );
   }
 
-  const itemMap = Object.fromEntries(state.items.map((it) => [it.id, it]));
+  const itemMap = useMemo(
+    () => Object.fromEntries(state.items.map((it) => [it.id, it])),
+    [state.items]
+  );
   const activeRound = state.rounds.find((r) => r.status === "ACTIVE");
   const pendingInRound = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
   const pendingPicks = state.participants.filter((p) => !p.hasSubmittedPicks);
@@ -201,11 +210,3 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   );
 }
 
-function Spinner() {
-  return (
-    <svg className="h-6 w-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-    </svg>
-  );
-}
