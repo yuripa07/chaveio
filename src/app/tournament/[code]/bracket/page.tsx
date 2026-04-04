@@ -184,37 +184,29 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     }
   }
 
-  if (!state) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <Spinner />
-      </main>
-    );
-  }
-
-  const me = state.participants.find((p) => p.id === participantId);
+  const me = state?.participants.find((p) => p.id === participantId);
   const joinedAtRound = me?.joinedAtRound ?? null;
   const startRound = joinedAtRound ?? 1;
   const alreadySubmitted = me?.hasSubmittedPicks ?? false;
 
   // In ACTIVE and already submitted: read-only view
-  const viewOnly = state.tournament.status === "ACTIVE" && alreadySubmitted;
+  const viewOnly = state?.tournament.status === "ACTIVE" && alreadySubmitted;
 
   const itemMap = useMemo(
-    () => Object.fromEntries((state.items ?? []).map((it) => [it.id, it])),
-    [state.items]
+    () => Object.fromEntries((state?.items ?? []).map((it) => [it.id, it])),
+    [state?.items]
   );
 
   // Augment rounds with virtual slots for future rounds
   const augmented = useMemo(
-    () => augmentRounds(state.rounds, picks, startRound),
-    [state.rounds, picks, startRound]
+    () => augmentRounds(state?.rounds ?? [], picks, startRound),
+    [state?.rounds, picks, startRound]
   );
 
   // Rounds before startRound are read-only (for late joiners)
   const readOnlyRounds = useMemo(
-    () => new Set(state.rounds.filter((r) => r.roundNumber < startRound).map((r) => r.roundNumber)),
-    [state.rounds, startRound]
+    () => new Set((state?.rounds ?? []).filter((r) => r.roundNumber < startRound).map((r) => r.roundNumber)),
+    [state?.rounds, startRound]
   );
 
   // Required matches for this participant — single pass
@@ -233,6 +225,14 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     return { pickedCount: picked, eligibleCount: eligible };
   }, [augmented, picks, startRound]);
   const allPicked = eligibleCount > 0 && pickedCount === eligibleCount;
+
+  if (!state) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <Spinner />
+      </main>
+    );
+  }
 
   const mode = viewOnly ? "view" : "predict";
   const isLobby = state.tournament.status === "LOBBY";
