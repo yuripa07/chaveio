@@ -139,10 +139,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <input
                   type="text"
                   placeholder="Seu nome no placar"
+                  aria-label="Seu nome no placar"
                   value={joinName}
                   onChange={(event) => setJoinName(event.target.value)}
                   required
                   autoFocus
+                  autoComplete="name"
                   className={cn(INPUT_CLASS, "pl-10 py-3")}
                 />
               </div>
@@ -152,9 +154,11 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Senha do torneio"
+                  aria-label="Senha do torneio"
                   value={joinPassword}
                   onChange={(event) => setJoinPassword(event.target.value)}
                   required
+                  autoComplete="current-password"
                   className={cn(INPUT_CLASS, "pl-10 pr-10 py-3")}
                 />
                 <button

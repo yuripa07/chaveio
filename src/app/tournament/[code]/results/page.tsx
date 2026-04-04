@@ -15,7 +15,7 @@ import dynamic from "next/dynamic";
 import type { TournamentState, PickResult, RankEntry, ItemMap } from "@/types/tournament";
 
 const BracketView = dynamic(() => import("@/components/BracketView"), {
-  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-zinc-100" />,
+  loading: () => <div className="h-64 motion-safe:animate-pulse rounded-2xl bg-zinc-100" />,
 });
 
 export default function ResultsPage({ params }: { params: Promise<{ code: string }> }) {

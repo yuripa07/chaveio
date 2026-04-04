@@ -14,7 +14,7 @@ export function PulseDot({ color = "indigo", size = "sm" }: PulseDotProps) {
     <span className={cn("relative flex", dimension)}>
       <span
         className={cn(
-          "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+          "absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full opacity-75",
           color === "amber" ? "bg-amber-400" : "bg-indigo-400"
         )}
       />

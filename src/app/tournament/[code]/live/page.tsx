@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, useCallback, useMemo } from "react";
+import { use, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BarChart2, Clock, Swords, Trophy, AlertTriangle, X } from "lucide-react";
@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import type { TournamentState, ItemMap, RankEntry, TournamentItem } from "@/types/tournament";
 
 const BracketView = dynamic(() => import("@/components/BracketView"), {
-  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-zinc-100" />,
+  loading: () => <div className="h-64 motion-safe:animate-pulse rounded-2xl bg-zinc-100" />,
 });
 
 type PendingWinner = { matchId: string; item: TournamentItem };
@@ -32,6 +32,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   const [resolving, setResolving] = useState<string | null>(null);
   const [winnerError, setWinnerError] = useState("");
   const [pendingWinner, setPendingWinner] = useState<PendingWinner | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (pendingWinner) dialogRef.current?.focus();
+  }, [pendingWinner]);
 
   const loadState = useCallback(async (authToken: string) => {
     const [tournamentRes, rankingsRes] = await Promise.all([
@@ -119,20 +124,32 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
       {/* Confirmation dialog */}
       {pendingWinner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingWinner(null); }}
+        >
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-winner-title"
+            tabIndex={-1}
+            onKeyDown={(e) => { if (e.key === "Escape") setPendingWinner(null); }}
+            className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl focus:outline-none"
+          >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                 <Trophy className="h-5 w-5 text-amber-600" />
               </div>
               <button
                 onClick={() => setPendingWinner(null)}
+                aria-label="Fechar"
                 className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
-            <h2 className="text-base font-bold text-zinc-900">Confirmar vencedor</h2>
+            <h2 id="confirm-winner-title" className="text-base font-bold text-zinc-900">Confirmar vencedor</h2>
             <p className="mt-1 text-sm text-zinc-500">
               Tem certeza que{" "}
               <strong className="text-zinc-800">{pendingWinner.item.name}</strong> ganhou essa partida?
@@ -147,7 +164,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
               </button>
               <button
                 onClick={confirmWinner}
-                className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[.98] transition-all"
+                className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[.98] transition"
               >
                 Confirmar
               </button>
