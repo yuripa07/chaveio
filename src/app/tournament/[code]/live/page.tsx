@@ -4,17 +4,15 @@ import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BarChart2, Clock, Swords, Trophy, AlertTriangle, X } from "lucide-react";
-import { decodeTokenPayload } from "@/lib/token-client";
-import { getStoredToken } from "@/lib/token-storage";
+import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { cn } from "@/lib/cn";
 import { TournamentStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
 import { PageSpinner } from "@/components/page-spinner";
-import { ErrorAlert } from "@/components/error-alert";
 import { InfoBanner } from "@/components/info-banner";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
 import { Spinner } from "@/components/spinner";
-import { cn } from "@/lib/cn";
 import dynamic from "next/dynamic";
 import type { TournamentState, ItemMap, RankEntry, TournamentItem } from "@/types/tournament";
 
@@ -27,32 +25,29 @@ type PendingWinner = { matchId: string; item: TournamentItem };
 export default function LivePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
+  const { token, isCreator } = useTournamentToken(code);
 
-  const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
   const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [resolving, setResolving] = useState<string | null>(null);
   const [winnerError, setWinnerError] = useState("");
   const [pendingWinner, setPendingWinner] = useState<PendingWinner | null>(null);
 
-  const loadState = useCallback(async (token: string) => {
-    const [tournamentResponse, rankingsResponse] = await Promise.all([
-      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${token}` } }),
+  const loadState = useCallback(async (authToken: string) => {
+    const [tournamentRes, rankingsRes] = await Promise.all([
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` } }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` } }),
     ]);
-    if (!tournamentResponse.ok) return null;
-    const rankingsData: RankEntry[] = rankingsResponse.ok
-      ? (await rankingsResponse.json()).rankings ?? []
-      : [];
-    return { state: (await tournamentResponse.json()) as TournamentState, rankings: rankingsData };
+    if (!tournamentRes.ok) return null;
+    const rankingsData: RankEntry[] = rankingsRes.ok ? (await rankingsRes.json()).rankings ?? [] : [];
+    return { state: (await tournamentRes.json()) as TournamentState, rankings: rankingsData };
   }, [code]);
 
+  // Initial load + redirect non-creators
   useEffect(() => {
-    const stored = getStoredToken(code);
-    if (!stored) { router.replace(`/tournament/${code}`); return; }
-    if (!decodeTokenPayload(stored)?.isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
-    setToken(stored);
-    loadState(stored).then((result) => {
+    if (!token) { router.replace(`/tournament/${code}`); return; }
+    if (!isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
+    loadState(token).then((result) => {
       if (!result) return;
       if (result.state.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -61,7 +56,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setState(result.state);
       setRankings(result.rankings);
     });
-  }, [code, loadState, router]);
+  }, [token, isCreator, code, loadState, router]);
 
   async function confirmWinner() {
     if (!token || !pendingWinner) return;
@@ -100,9 +95,9 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   if (!state) return <PageSpinner />;
 
-  const activeRound = state.rounds.find((round) => round.status === TournamentStatus.ACTIVE);
-  const pendingMatches = activeRound?.matches.filter((match) => match.status !== "COMPLETE") ?? [];
-  const pendingParticipants = state.participants.filter((participant) => !participant.hasSubmittedPicks);
+  const activeRound = state.rounds.find((r) => r.status === TournamentStatus.ACTIVE);
+  const pendingMatches = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
+  const pendingParticipants = state.participants.filter((p) => !p.hasSubmittedPicks);
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
@@ -168,7 +163,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
             <Clock className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               Aguardando palpites de:{" "}
-              <strong>{pendingParticipants.map((participant) => participant.displayName).join(", ")}</strong>.
+              <strong>{pendingParticipants.map((p) => p.displayName).join(", ")}</strong>.
               {" "}Os vencedores não podem ser definidos até que todos enviem seus palpites.
             </span>
           </InfoBanner>

@@ -1,17 +1,16 @@
 "use client";
 
 import { use, useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
-import { decodeTokenPayload } from "@/lib/token-client";
-import { getStoredToken } from "@/lib/token-storage";
 import { TournamentStatus, POLL_INTERVAL_RESULTS } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
 import { PageSpinner } from "@/components/page-spinner";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
 import { ScoreStat } from "@/components/score-stat";
+import { ResultIcon } from "@/components/result-icon";
 import dynamic from "next/dynamic";
 import type { TournamentState, PickResult, RankEntry, ItemMap } from "@/types/tournament";
 
@@ -21,57 +20,49 @@ const BracketView = dynamic(() => import("@/components/BracketView"), {
 
 export default function ResultsPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
-  const router = useRouter();
+  const { token, participantId, isCreator } = useTournamentToken(code);
 
-  const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
   const [myPicks, setMyPicks] = useState<PickResult[]>([]);
   const [rankings, setRankings] = useState<RankEntry[]>([]);
-  const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
-  const [isCreator, setIsCreator] = useState(false);
 
-  const loadData = useCallback(async (token: string, signal?: AbortSignal) => {
-    const [tournamentResponse, picksResponse, rankingsResponse] = await Promise.all([
-      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
-      fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
-      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+  const loadData = useCallback(async (authToken: string, signal?: AbortSignal) => {
+    const [tournamentRes, picksRes, rankingsRes] = await Promise.all([
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
+      fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
     ]);
-    if (!tournamentResponse.ok) return null;
-    const tournamentData = (await tournamentResponse.json()) as TournamentState;
-    const picks: PickResult[] = picksResponse.ok ? (await picksResponse.json()).picks ?? [] : [];
-    const rankingsData: RankEntry[] = rankingsResponse.ok ? (await rankingsResponse.json()).rankings ?? [] : [];
+    if (!tournamentRes.ok) return null;
+    const tournamentData = (await tournamentRes.json()) as TournamentState;
+    const picks: PickResult[] = picksRes.ok ? (await picksRes.json()).picks ?? [] : [];
+    const rankingsData: RankEntry[] = rankingsRes.ok ? (await rankingsRes.json()).rankings ?? [] : [];
     return { tournamentData, picks, rankings: rankingsData };
   }, [code]);
 
+  // Initial load
   useEffect(() => {
-    const stored = getStoredToken(code);
-    if (!stored) { router.replace(`/tournament/${code}`); return; }
-    const payload = decodeTokenPayload(stored);
-    setIsCreator(payload?.isCreator ?? false);
-    setMyParticipantId(payload?.participantId ?? null);
-    setToken(stored);
-    loadData(stored).then((result) => {
+    if (!token) return;
+    loadData(token).then((result) => {
       if (!result) return;
       setState(result.tournamentData);
       setMyPicks(result.picks);
       setRankings(result.rankings);
     });
-  }, [code, loadData, router]);
+  }, [token, loadData]);
 
-  useEffect(() => {
-    if (!token || state?.tournament.status === TournamentStatus.FINISHED) return;
-    const controller = new AbortController();
-    const interval = setInterval(() => {
-      loadData(token, controller.signal).then((result) => {
-        if (!result) return;
-        setState(result.tournamentData);
-        setMyPicks(result.picks);
-        setRankings(result.rankings);
-        if (result.tournamentData.tournament.status === TournamentStatus.FINISHED) clearInterval(interval);
-      }).catch(() => {});
-    }, POLL_INTERVAL_RESULTS);
-    return () => { controller.abort(); clearInterval(interval); };
-  }, [token, state?.tournament.status, loadData]);
+  // Poll until finished
+  usePolling(
+    async (signal) => {
+      if (!token) return;
+      const result = await loadData(token, signal);
+      if (!result) return;
+      setState(result.tournamentData);
+      setMyPicks(result.picks);
+      setRankings(result.rankings);
+    },
+    POLL_INTERVAL_RESULTS,
+    !!token && state?.tournament.status !== TournamentStatus.FINISHED
+  );
 
   const itemMap = useMemo(
     () => Object.fromEntries((state?.items ?? []).map((item) => [item.id, item])) as ItemMap,
@@ -110,18 +101,10 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         code={code}
         name={state.tournament.name}
         backHref={
-          isFinished
-            ? "/"
-            : isCreator
-            ? `/tournament/${code}/live`
-            : `/tournament/${code}/bracket`
+          isFinished ? "/" : isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`
         }
         backLabel={
-          isFinished
-            ? "Início"
-            : isCreator
-            ? "Definir vencedores"
-            : "Meus palpites"
+          isFinished ? "Início" : isCreator ? "Definir vencedores" : "Meus palpites"
         }
         rightSlot={statusBadge}
       />
@@ -142,11 +125,11 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           </div>
         </div>
 
-        {/* Rankings table */}
+        {/* Rankings */}
         {rankings.length > 1 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking</h2>
-            <RankingsTable rankings={rankings} currentParticipantId={myParticipantId} />
+            <RankingsTable rankings={rankings} currentParticipantId={participantId} />
           </section>
         )}
 
@@ -163,6 +146,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                     const myPick = myPickMap[match.id];
                     const myItem = myPick ? itemMap[myPick.pickedItemId] : null;
                     const isCorrect = myPick?.isCorrect;
+                    const resultType = isCorrect === true ? "correct" : isCorrect === false ? "incorrect" : "pending";
 
                     return (
                       <div
@@ -176,19 +160,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                             : "border-zinc-100 bg-white"
                         )}
                       >
-                        <div className="shrink-0">
-                          {isCorrect === true ? (
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="h-5 w-5 text-emerald-500">
-                              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
-                            </svg>
-                          ) : isCorrect === false ? (
-                            <svg viewBox="0 0 16 16" fill="currentColor" className="h-5 w-5 text-red-400">
-                              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm-3.28-6.22a.75.75 0 0 0 1.06 1.06L8 9.06l2.22 2.22a.75.75 0 1 0 1.06-1.06L9.06 8l2.22-2.22a.75.75 0 0 0-1.06-1.06L8 6.94 5.78 4.72a.75.75 0 0 0-1.06 1.06L6.94 8l-2.22 2.22Z" />
-                            </svg>
-                          ) : (
-                            <div className="h-5 w-5 rounded-full border-2 border-zinc-200" />
-                          )}
-                        </div>
+                        <ResultIcon result={resultType} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 text-sm">
                             <span className="text-xxs font-bold text-zinc-400">
@@ -212,9 +184,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                           <span
                             className={cn(
                               "shrink-0 rounded-lg px-2.5 py-1 text-sm font-bold",
-                              isCorrect
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-zinc-100 text-zinc-400"
+                              isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-400"
                             )}
                           >
                             {isCorrect ? `+${myPick.pointsEarned}` : "0"}

@@ -69,8 +69,10 @@ src/
 │               └── winner/route.ts       # POST set winner (creator)
 │       └── picks/route.ts               # GET/POST picks
 ├── lib/
+│   ├── api-utils.ts         # handleRequest() — auth + body parsing helper for API routes
 │   ├── auth.ts              # signToken, verifyToken, requireParticipant, requireCreator, AuthError
 │   ├── bracket.ts           # seedPositions, generateFirstRoundPairs, getNextRoundSlot, getFeederMatches
+│   ├── bracket-client.ts    # augmentRounds, clearDownstream (client-side bracket logic)
 │   ├── cn.ts                # cn() — twMerge wrapper
 │   ├── codes.ts             # generateCode (6-char, no ambiguous: 0OI1)
 │   ├── db.ts                # PrismaClient singleton (globalThis pattern)
@@ -78,6 +80,9 @@ src/
 │   ├── points.ts            # computeRoundPoints, computeMaxPoints
 │   ├── token-client.ts      # decodeTokenPayload (client-side, no verify)
 │   └── token-storage.ts     # getStoredToken, setStoredToken (try-catch wrappers)
+├── hooks/
+│   ├── use-polling.ts        # usePolling() — interval + AbortController cleanup
+│   └── use-tournament-token.ts # useTournamentToken() — localStorage JWT management
 ├── components/
 │   ├── BracketView.tsx       # SVG bracket visualization (pick/predict/view modes)
 │   ├── back-link.tsx         # Back navigation arrow
@@ -88,6 +93,7 @@ src/
 │   ├── page-spinner.tsx      # Full-page loading (PageSpinner + PageSkeleton)
 │   ├── pulse-dot.tsx         # Animated status dot
 │   ├── rankings-table.tsx    # Leaderboard table (highlights current user)
+│   ├── result-icon.tsx       # Correct/incorrect/pending SVG icons
 │   ├── score-stat.tsx        # Score display card
 │   ├── spinner.tsx           # Inline spinner (sm/md/lg)
 │   └── tournament-header.tsx # Sticky header with code/name/back
@@ -217,20 +223,22 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 - Route params: `params: Promise<{ code: string }>`
 
 ### Frontend Patterns (see `docs/frontend-conventions.md`)
-1. **Parallel fetches** — `Promise.all()` for independent API calls
-2. **Dynamic imports** — `next/dynamic` for BracketView on live/results (static on bracket)
-3. **useMemo** — for derived objects/arrays (`itemMap`, `augmentRounds`, `readOnlyRounds`)
-4. **Functional setState** — always `setState(prev => ...)` when depending on previous state
-5. **localStorage try-catch** — use `getStoredToken()`/`setStoredToken()` from `lib/token-storage.ts`
-6. **Polling with AbortController** — cancel in-flight requests on unmount, ignore `AbortError`
-7. **Poll intervals**: lobby=3s, bracket=5s, results=4s (defined in `constants/tournament.ts`)
-8. **Ternary over &&** — when condition could be falsy non-boolean (0, NaN)
-9. **No inline components/IIFEs** — extract to named components
-10. **Derive state during render** — don't use useEffect to sync derived state
+1. **Custom hooks** — `useTournamentToken()` for JWT management, `usePolling()` for interval+abort
+2. **Parallel fetches** — `Promise.all()` for independent API calls
+3. **Dynamic imports** — `next/dynamic` for BracketView on live/results (static on bracket)
+4. **useMemo** — for derived objects/arrays (`itemMap`, `augmentRounds`, `readOnlyRounds`)
+5. **Functional setState** — always `setState(prev => ...)` when depending on previous state
+6. **localStorage try-catch** — use `getStoredToken()`/`setStoredToken()` from `lib/token-storage.ts`
+7. **Polling with AbortController** — use `usePolling()` hook from `hooks/use-polling.ts`
+8. **Poll intervals**: lobby=3s, bracket=5s, results=4s (defined in `constants/tournament.ts`)
+9. **Ternary over &&** — when condition could be falsy non-boolean (0, NaN)
+10. **No inline components/IIFEs** — extract to named components
+11. **Derive state during render** — don't use useEffect to sync derived state
+12. **Shared bracket logic** — `augmentRounds()`, `clearDownstream()` in `lib/bracket-client.ts`
 
 ### Backend Patterns (see `docs/backend-conventions.md`)
-1. **Start promises early** — auth + `req.json()` + `params` begin in parallel
-2. **AuthError try-catch** — consistent pattern in all protected routes
+1. **`handleRequest()` helper** — `lib/api-utils.ts` handles auth + body parsing with consistent errors
+2. **Start promises early** — auth + `req.json()` + `params` begin in parallel
 3. **Set for O(1) lookups** — convert arrays to Set when checking membership
 4. **Combine iterations** — single loop instead of multiple filter/map chains
 5. **Focused transactions** — only mutations inside `$transaction`, hashing/validation before

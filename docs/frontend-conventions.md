@@ -1,6 +1,30 @@
 # Frontend Conventions
 
-Rules for `src/app/` and `src/components/`. Based on Vercel React best practices.
+Rules for `src/app/`, `src/components/`, and `src/hooks/`. Based on Vercel React best practices.
+
+---
+
+## 0. Custom Hooks (CRITICAL)
+
+Reusable hooks live in `src/hooks/`. Use them instead of reimplementing patterns:
+
+- **`useTournamentToken(code)`** — reads JWT from localStorage, decodes participantId/isCreator
+- **`usePolling(callback, interval, enabled)`** — interval with automatic AbortController cleanup
+
+```typescript
+// Token management
+const { token, participantId, isCreator, setTokenFromResponse } = useTournamentToken(code);
+
+// Polling (automatically cancels on unmount or when disabled)
+usePolling(
+  async (signal) => {
+    const res = await fetch(url, { signal });
+    // ...
+  },
+  POLL_INTERVAL_LOBBY,
+  !!token && isLobby
+);
+```
 
 ---
 
@@ -103,30 +127,26 @@ These wrap `localStorage` in try-catch (throws in incognito Safari, storage full
 
 ---
 
-## 8. Polling with AbortController (HIGH)
+## 8. Polling with usePolling Hook (HIGH)
 
-All polling must use AbortController to cancel in-flight requests on unmount:
+Use the `usePolling` hook from `hooks/use-polling.ts` instead of manual setInterval+AbortController:
 
 ```typescript
-useEffect(() => {
-  if (!shouldPoll) return
-  const controller = new AbortController()
+import { usePolling } from "@/hooks/use-polling";
 
-  const interval = setInterval(() => {
-    fetch(url, { signal: controller.signal })
-      .then(r => r.json())
-      .then(handleData)
-      .catch(err => {
-        if (err.name !== 'AbortError') console.error(err)
-      })
-  }, POLL_INTERVAL)
-
-  return () => {
-    controller.abort()
-    clearInterval(interval)
-  }
-}, [shouldPoll])
+usePolling(
+  async (signal) => {
+    const res = await fetch(url, { signal });
+    if (!res.ok) return;
+    const data = await res.json();
+    setState(data);
+  },
+  POLL_INTERVAL_LOBBY,  // from constants/tournament.ts
+  shouldPoll             // boolean — polling stops when false
+);
 ```
+
+The hook handles AbortController creation, cleanup on unmount, and error swallowing.
 
 Poll intervals are defined in `constants/tournament.ts` (lobby=3s, bracket=5s, results=4s).
 
@@ -173,6 +193,7 @@ Reusable components live in `src/components/`. Always check if one exists before
 | `info-banner.tsx` | Info/warning banner |
 | `tournament-header.tsx` | Sticky header with code/name/back |
 | `rankings-table.tsx` | Leaderboard (highlights current user) |
+| `result-icon.tsx` | Correct/incorrect/pending result SVG icons |
 | `back-link.tsx` | Back navigation arrow |
 | `form-field.tsx` | Labeled input wrapper |
 | `score-stat.tsx` | Score display card |

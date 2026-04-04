@@ -175,7 +175,7 @@ export default function NewTournament() {
                     <span className="ml-1 text-xs font-normal text-zinc-400">(opcional)</span>
                   </label>
                   <p className="mt-0.5 text-xs text-zinc-400">
-                    O que está sendo disputado em cada fase? Ex: "Melhor bandeira", "Melhor culinária".
+                    O que está sendo disputado em cada fase? Ex: &ldquo;Melhor bandeira&rdquo;, &ldquo;Melhor culinária&rdquo;.
                   </p>
                 </div>
                 <div className="space-y-2">

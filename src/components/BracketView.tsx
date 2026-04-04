@@ -9,6 +9,7 @@ import {
 } from "@/constants/bracket-layout";
 import { RoundStatus } from "@/constants/tournament";
 import { PulseDot } from "@/components/pulse-dot";
+import { ResultIcon } from "@/components/result-icon";
 import type { TournamentItem, BracketRound } from "@/types/tournament";
 
 type BracketViewProps = {
@@ -159,9 +160,7 @@ export default function BracketView({
                                 {item.name}
                               </span>
                               {isWinner && (
-                                <svg viewBox="0 0 16 16" fill="currentColor" className="ml-auto h-4 w-4 shrink-0 text-emerald-500">
-                                  <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
-                                </svg>
+                                <ResultIcon result="correct" className="ml-auto h-4 w-4 shrink-0" />
                               )}
                             </button>
                           );

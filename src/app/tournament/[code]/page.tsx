@@ -4,8 +4,8 @@ import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft } from "lucide-react";
-import { decodeTokenPayload } from "@/lib/token-client";
-import { getStoredToken, setStoredToken } from "@/lib/token-storage";
+import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/constants/styles";
 import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
@@ -19,63 +19,55 @@ import type { Participant, TournamentState } from "@/types/tournament";
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
+  const { token, isCreator, setTokenFromResponse } = useTournamentToken(code);
 
   const [tournamentData, setTournamentData] = useState<TournamentState | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isCreator, setIsCreator] = useState(false);
   const [joinName, setJoinName] = useState("");
   const [joinPassword, setJoinPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [loadingInitial, setLoadingInitial] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const fetchState = useCallback(async (token: string, signal?: AbortSignal) => {
+  const fetchState = useCallback(async (authToken: string, signal?: AbortSignal) => {
     const response = await fetch(`/api/tournaments/${code}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${authToken}` },
       signal,
     });
     if (!response.ok) return null;
     return (await response.json()) as TournamentState;
   }, [code]);
 
-  useEffect(() => {
-    const stored = getStoredToken(code);
-    if (!stored) { setLoadingInitial(false); return; }
-    setToken(stored);
-    const creator = decodeTokenPayload(stored)?.isCreator ?? false;
-    setIsCreator(creator);
-    fetchState(stored).then((tournamentData) => {
-      setLoadingInitial(false);
-      if (!tournamentData) return;
-      setTournamentData(tournamentData);
-      if (tournamentData.tournament.status === TournamentStatus.ACTIVE)
-        router.replace(creator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`);
-      else if (tournamentData.tournament.status === TournamentStatus.FINISHED)
-        router.replace(`/tournament/${code}/results`);
-    });
-  }, [code, fetchState, router]);
+  function redirectByStatus(status: string, creator: boolean) {
+    if (status === TournamentStatus.ACTIVE)
+      router.replace(creator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`);
+    else if (status === TournamentStatus.FINISHED)
+      router.replace(`/tournament/${code}/results`);
+  }
 
+  // Initial load
   useEffect(() => {
-    if (!token || tournamentData?.tournament.status !== TournamentStatus.LOBBY) return;
-    const controller = new AbortController();
-    const interval = setInterval(() => {
-      fetchState(token, controller.signal).then((tournamentData) => {
-        if (!tournamentData) return;
-        setTournamentData(tournamentData);
-        if (tournamentData.tournament.status === TournamentStatus.ACTIVE) {
-          clearInterval(interval);
-          router.replace(isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`);
-        } else if (tournamentData.tournament.status === TournamentStatus.FINISHED) {
-          clearInterval(interval);
-          router.replace(`/tournament/${code}/results`);
-        }
-      }).catch(() => {});
-    }, POLL_INTERVAL_LOBBY);
-    return () => { controller.abort(); clearInterval(interval); };
-  }, [token, tournamentData?.tournament.status, fetchState, code, router, isCreator]);
+    if (!token) return;
+    fetchState(token).then((data) => {
+      if (!data) return;
+      setTournamentData(data);
+      redirectByStatus(data.tournament.status, isCreator);
+    });
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Poll while in lobby
+  usePolling(
+    async (signal) => {
+      if (!token) return;
+      const data = await fetchState(token, signal);
+      if (!data) return;
+      setTournamentData(data);
+      redirectByStatus(data.tournament.status, isCreator);
+    },
+    POLL_INTERVAL_LOBBY,
+    !!token && tournamentData?.tournament.status === TournamentStatus.LOBBY
+  );
 
   async function handleJoin(event: React.FormEvent) {
     event.preventDefault();
@@ -89,11 +81,9 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       });
       const body = await response.json();
       if (!response.ok) { setJoinError(body.error ?? "Falha ao entrar"); return; }
-      setStoredToken(code, body.token);
-      setToken(body.token);
-      setIsCreator(decodeTokenPayload(body.token)?.isCreator ?? false);
-      const tournamentData = await fetchState(body.token);
-      if (tournamentData) setTournamentData(tournamentData);
+      setTokenFromResponse(code, body.token);
+      const data = await fetchState(body.token);
+      if (data) setTournamentData(data);
     } catch {
       setJoinError("Erro de rede");
     } finally {
@@ -123,8 +113,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     });
   }
 
-  if (loadingInitial) return <PageSkeleton />;
-
   /* ── Join screen (not yet authenticated) ── */
   if (!token) {
     return (
@@ -146,7 +134,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             </div>
 
             <form onSubmit={handleJoin} className="space-y-3">
-              {/* Name field */}
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                 <input
@@ -160,7 +147,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 />
               </div>
 
-              {/* Password field with toggle */}
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                 <input
