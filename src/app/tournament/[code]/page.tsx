@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff } from "lucide-react";
+import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { decodeTokenPayload } from "@/lib/token-client";
 import { getStoredToken, setStoredToken } from "@/lib/token-storage";
 import { cn } from "@/lib/cn";
@@ -215,33 +215,14 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     <main className="flex min-h-screen flex-col bg-zinc-50">
       <div className="border-b border-zinc-100 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+          <Link href="/" className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
+            <ChevronLeft className="h-4 w-4" />
+            Início
+          </Link>
+          <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600">
             <Trophy className="h-4 w-4" />
             Chaveio
           </Link>
-          {/* Copy-link button with feedback */}
-          <button
-            onClick={handleCopyCode}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-              copied
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
-            )}
-            title="Copiar link do torneio"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Link copiado!
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5" />
-                Compartilhar
-              </>
-            )}
-          </button>
         </div>
       </div>
 

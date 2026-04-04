@@ -51,19 +51,23 @@ export async function POST(
     return Response.json({ token }, { status: 200 });
   }
 
+  // Block new registrations for finished tournaments
+  if (tournament.status === "FINISHED") {
+    return Response.json(
+      { error: "Este torneio já foi finalizado. Novos participantes não podem entrar." },
+      { status: 403 }
+    );
+  }
+
   const passwordHash = await bcrypt.hash(password, 10);
 
   // Determine joinedAtRound for late joiners
   let joinedAtRound: number | null = null;
-  let hasSubmittedPicks = false;
+  const hasSubmittedPicks = false;
 
   if (tournament.status === "ACTIVE") {
     const activeRound = tournament.rounds[0];
     joinedAtRound = activeRound?.roundNumber ?? null;
-    hasSubmittedPicks = false;
-  } else if (tournament.status === "FINISHED") {
-    // Joining a finished tournament: no picks needed
-    hasSubmittedPicks = true;
   }
 
   const participant = await prisma.participant.create({

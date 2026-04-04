@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PlusCircle, LogIn, Trophy, AlertCircle, ArrowRight } from "lucide-react";
+import { PlusCircle, LogIn, Trophy, AlertCircle } from "lucide-react";
 import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/cn";
@@ -16,6 +16,7 @@ export default function Home() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [codeHint, setCodeHint] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
 
   function handleCodeChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -25,19 +26,33 @@ export default function Home() {
     } else {
       setCodeHint(null);
     }
-    setCode(raw.replace(VALID_CODE_CHARS, ""));
+    // Enforce max length here too (mobile keyboards can bypass the `maxLength` attr)
+    setCode(raw.replace(VALID_CODE_CHARS, "").slice(0, TOURNAMENT_CODE_LENGTH));
+    setCodeError(null);
   }
 
-  function handleJoin(event: React.FormEvent) {
+  async function handleJoin(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = code.trim().toUpperCase();
     if (trimmed.length !== TOURNAMENT_CODE_LENGTH) return;
     setJoining(true);
+    setCodeError(null);
+    try {
+      const res = await fetch(`/api/tournaments/${trimmed}/check`);
+      if (res.status === 404) {
+        setCodeError(`Torneio "${trimmed}" não encontrado. Verifique o código e tente novamente.`);
+        return;
+      }
+    } catch {
+      // Network issue — let the lobby page handle it
+    } finally {
+      setJoining(false);
+    }
     router.push(`/tournament/${trimmed}`);
   }
 
-  const codeProgress = code.length / TOURNAMENT_CODE_LENGTH;
   const codeComplete = code.length === TOURNAMENT_CODE_LENGTH;
+  const codeProgress = code.length / TOURNAMENT_CODE_LENGTH;
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -59,11 +74,10 @@ export default function Home() {
           <div className="space-y-3">
             <Link
               href="/tournament/new"
-              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
             >
               <PlusCircle className="h-4 w-4" />
               Criar torneio
-              <ArrowRight className="ml-auto h-4 w-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </Link>
 
             <div className="relative py-2">
@@ -82,21 +96,24 @@ export default function Home() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Ex: ABC2XY"
+                    placeholder="XXXXXX"
                     value={code}
                     onChange={handleCodeChange}
                     maxLength={TOURNAMENT_CODE_LENGTH}
                     spellCheck={false}
                     autoComplete="off"
+                    inputMode="text"
                     className={cn(
                       "w-full rounded-2xl border bg-white px-5 py-3.5 text-center text-xl font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:text-zinc-300 focus:outline-none focus:ring-2 transition",
                       codeComplete
-                        ? "border-emerald-300 ring-0 focus:ring-emerald-400 text-emerald-700"
+                        ? "border-emerald-300 focus:ring-emerald-400 text-emerald-700"
+                        : codeError
+                        ? "border-red-300 focus:ring-red-400 text-zinc-900"
                         : "border-zinc-200 focus:border-transparent focus:ring-indigo-500 text-zinc-900"
                     )}
                   />
-                  {/* Progress bar under input */}
-                  {code.length > 0 && !codeComplete && (
+                  {/* Progress bar */}
+                  {code.length > 0 && !codeComplete && !codeError && (
                     <div className="absolute bottom-0 left-4 right-4 h-0.5 overflow-hidden rounded-full bg-zinc-100">
                       <div
                         className="h-full bg-indigo-400 transition-all duration-200"
@@ -106,7 +123,12 @@ export default function Home() {
                   )}
                 </div>
 
-                {codeHint ? (
+                {codeError ? (
+                  <div className="flex items-start gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{codeError}</span>
+                  </div>
+                ) : codeHint ? (
                   <div className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
                     <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     <span>{codeHint}</span>
@@ -130,7 +152,7 @@ export default function Home() {
                 {joining ? (
                   <>
                     <Spinner size="sm" />
-                    Entrando…
+                    Verificando…
                   </>
                 ) : (
                   <>
