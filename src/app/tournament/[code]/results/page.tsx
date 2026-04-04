@@ -120,7 +120,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           isFinished
             ? "Início"
             : isCreator
-            ? "Resolver partidas"
+            ? "Definir vencedores"
             : "Meus palpites"
         }
         rightSlot={statusBadge}
@@ -137,8 +137,8 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           </div>
           <div className="flex divide-x divide-zinc-100">
             <ScoreStat label="Corretos" value={correctCount} />
-            <ScoreStat label="Resolvidos" value={resolvedCount} />
-            <ScoreStat label="Pendentes" value={myPicks.length - resolvedCount} />
+            <ScoreStat label="Disputados" value={resolvedCount} />
+            <ScoreStat label="Aguardando" value={myPicks.length - resolvedCount} />
           </div>
         </div>
 

@@ -169,7 +169,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
             <span>
               Aguardando palpites de:{" "}
               <strong>{pendingParticipants.map((participant) => participant.displayName).join(", ")}</strong>.
-              {" "}Partidas não podem ser resolvidas até que todos enviem seus palpites.
+              {" "}Os vencedores não podem ser definidos até que todos enviem seus palpites.
             </span>
           </InfoBanner>
         )}
