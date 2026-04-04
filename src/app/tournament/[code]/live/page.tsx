@@ -109,6 +109,8 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       <TournamentHeader
         code={code}
         name={state.tournament.name}
+        backHref={`/tournament/${code}`}
+        backLabel="Sala de espera"
         rightSlot={
           <Link
             href={`/tournament/${code}/results`}

@@ -109,19 +109,21 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
       <TournamentHeader
         code={code}
         name={state.tournament.name}
-        rightSlot={
-          <>
-            {statusBadge}
-            {isCreator && !isFinished && (
-              <Link
-                href={`/tournament/${code}/live`}
-                className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
-              >
-                ← Resolver
-              </Link>
-            )}
-          </>
+        backHref={
+          isFinished
+            ? "/"
+            : isCreator
+            ? `/tournament/${code}/live`
+            : `/tournament/${code}`
         }
+        backLabel={
+          isFinished
+            ? "Início"
+            : isCreator
+            ? "Resolver partidas"
+            : "Sala de espera"
+        }
+        rightSlot={statusBadge}
       />
 
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-8">
@@ -249,11 +251,6 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           </p>
         )}
 
-        <div className="text-center">
-          <Link href="/" className="text-sm text-zinc-400 hover:text-zinc-700 transition-colors">
-            ← Início
-          </Link>
-        </div>
       </div>
     </main>
   );

@@ -246,7 +246,13 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
-      <TournamentHeader code={code} name={state.tournament.name} rightSlot={statusBadge} />
+      <TournamentHeader
+        code={code}
+        name={state.tournament.name}
+        backHref={`/tournament/${code}`}
+        backLabel="Sala de espera"
+        rightSlot={statusBadge}
+      />
 
       <div className="flex flex-1 flex-col px-6 py-8">
         <div className="mx-auto w-full max-w-5xl space-y-6">
