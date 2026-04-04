@@ -23,6 +23,14 @@ describe("seedPositions", () => {
     expect(pos).toHaveLength(16);
     expect(new Set(pos).size).toBe(16);
   });
+
+  it("n=32 returns 32 unique seeds from 1..32", () => {
+    const pos = seedPositions(32);
+    expect(pos).toHaveLength(32);
+    expect(new Set(pos).size).toBe(32);
+    expect(Math.min(...pos)).toBe(1);
+    expect(Math.max(...pos)).toBe(32);
+  });
 });
 
 describe("generateFirstRoundPairs", () => {
@@ -36,6 +44,17 @@ describe("generateFirstRoundPairs", () => {
   it("n=4 first pair is [1,4] (top seed vs bottom seed)", () => {
     const pairs = generateFirstRoundPairs(4);
     expect(pairs[0]).toEqual([1, 4]);
+  });
+
+  it("n=8 first pair is [1,8]", () => {
+    const pairs = generateFirstRoundPairs(8);
+    expect(pairs[0]).toEqual([1, 8]);
+  });
+
+  it("n=8 produces 4 pairs with no repeated seed", () => {
+    const pairs = generateFirstRoundPairs(8);
+    expect(pairs).toHaveLength(4);
+    expect(new Set(pairs.flat()).size).toBe(8);
   });
 
   it("n=16 produces 8 pairs with no repeated item", () => {
@@ -61,6 +80,22 @@ describe("getNextRoundSlot", () => {
 
   it("match 4 → {matchIndex: 1, slotPosition: 2}", () => {
     expect(getNextRoundSlot(4)).toEqual({ matchIndex: 1, slotPosition: 2 });
+  });
+
+  it("match 5 → {matchIndex: 2, slotPosition: 1}", () => {
+    expect(getNextRoundSlot(5)).toEqual({ matchIndex: 2, slotPosition: 1 });
+  });
+
+  it("match 6 → {matchIndex: 2, slotPosition: 2}", () => {
+    expect(getNextRoundSlot(6)).toEqual({ matchIndex: 2, slotPosition: 2 });
+  });
+
+  it("match 7 → {matchIndex: 3, slotPosition: 1}", () => {
+    expect(getNextRoundSlot(7)).toEqual({ matchIndex: 3, slotPosition: 1 });
+  });
+
+  it("match 8 → {matchIndex: 3, slotPosition: 2}", () => {
+    expect(getNextRoundSlot(8)).toEqual({ matchIndex: 3, slotPosition: 2 });
   });
 });
 

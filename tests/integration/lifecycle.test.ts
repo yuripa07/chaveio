@@ -16,7 +16,6 @@ afterAll(async () => {
   await testPrisma.$disconnect();
 });
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 async function setup() {
   const { code, token: creatorToken } = await createTournament().then((r) => r.json());
@@ -49,8 +48,6 @@ async function setupAndStart() {
   return { code, creatorToken, bobToken, t, r1Matches: t.rounds[0].matches };
 }
 
-// ── POST /api/tournaments/[code]/start ────────────────────────────────────
-
 describe("POST /api/tournaments/[code]/start", () => {
   it("returns 403 for non-creator token", async () => {
     const { code, bobToken } = await setup();
@@ -69,7 +66,6 @@ describe("POST /api/tournaments/[code]/start", () => {
 
   it("returns 409 if not all participants have submitted picks", async () => {
     const { code, creatorToken } = await setup();
-    // Only creator submitted, Bob did not
     await submitFullBracketPicks(creatorToken, code);
     const res = await startTournament(code, creatorToken);
     expect(res.status).toBe(409);
@@ -93,27 +89,21 @@ describe("POST /api/tournaments/[code]/start", () => {
     const t = await getTournamentFromDb(code);
     expect(t.status).toBe("ACTIVE");
     expect(t.startedAt).toBeTruthy();
-    // Bracket was created at tournament creation; start just activates round 1
     expect(t.rounds).toHaveLength(2);
     expect(t.rounds[0].status).toBe("ACTIVE");
     expect(t.rounds[1].status).toBe("PENDING");
-    // Round 1 matches have real slots
     for (const m of t.rounds[0].matches) {
       expect(m.slots).toHaveLength(2);
     }
-    // Round 2 match has no slots yet
     expect(t.rounds[1].matches[0].slots).toHaveLength(0);
   });
 
   it("assigns correct point values to rounds", async () => {
     const { t } = await setupAndStart();
-    // 4 items → round 1 = 1pt, round 2 (final) = 4pts
     expect(t.rounds[0].pointValue).toBe(1);
     expect(t.rounds[1].pointValue).toBe(4);
   });
 });
-
-// ── POST /api/tournaments/[code]/matches/[id]/winner ──────────────────────
 
 describe("POST /api/tournaments/[code]/matches/[id]/winner", () => {
   it("returns 403 for non-creator", async () => {
@@ -154,7 +144,6 @@ describe("POST /api/tournaments/[code]/matches/[id]/winner", () => {
     const alice = participants.find((p) => p.isCreator)!;
     const bob = participants.find((p) => !p.isCreator)!;
 
-    // Alice always picks slot[0], Bob picks slot[1] for this match
     await testPrisma.pick.update({
       where: { participantId_matchId: { participantId: bob.id, matchId: match.id } },
       data: { pickedItemId: wrongItemId },
@@ -198,6 +187,45 @@ describe("POST /api/tournaments/[code]/matches/[id]/winner", () => {
     const t = await getTournamentFromDb(code);
     expect(t.rounds[0].status).toBe("COMPLETE");
     expect(t.rounds[1].status).toBe("ACTIVE");
+  });
+
+  it("returns 409 when match is already resolved", async () => {
+    const { code, creatorToken, r1Matches } = await setupAndStart();
+    const match = r1Matches[0];
+    const winnerId = match.slots[0].itemId;
+
+    await setWinner(code, match.id, winnerId, creatorToken);
+    const res = await setWinner(code, match.id, winnerId, creatorToken);
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 404 when matchId does not belong to the given tournament code", async () => {
+    const { code: code1, creatorToken: token1, r1Matches } = await setupAndStart();
+
+    const { code: code2 } = await setupAndStart().then(({ code, creatorToken, bobToken }) => {
+      void creatorToken;
+      void bobToken;
+      return { code };
+    });
+
+    const match = r1Matches[0];
+    const { POST } = await import("@/app/api/tournaments/[code]/matches/[id]/winner/route");
+    const { NextRequest } = await import("next/server");
+    const res = await POST(
+      new NextRequest(
+        `http://localhost/api/tournaments/${code2}/matches/${match.id}/winner`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token1}`,
+          },
+          body: JSON.stringify({ winnerId: match.slots[0].itemId }),
+        }
+      ),
+      { params: Promise.resolve({ code: code2, id: match.id }) }
+    );
+    expect(res.status).toBe(404);
   });
 
   it("finishes tournament when final match resolves", async () => {

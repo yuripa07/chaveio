@@ -17,7 +17,6 @@ afterAll(async () => {
   await testPrisma.$disconnect();
 });
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 async function setup() {
   const { code, token: creatorToken } = await createTournament().then((r) => r.json());
@@ -35,8 +34,6 @@ async function setupAndStart() {
   await startTournament(code, creatorToken);
   return { code, creatorToken, bobToken };
 }
-
-// ── GET /api/tournaments/[code]/rankings ─────────────────────────────────
 
 describe("GET /api/tournaments/[code]/rankings", () => {
   it("returns 401 without token", async () => {

@@ -43,8 +43,6 @@ async function startedTournament() {
   return { code, creatorToken, bobToken };
 }
 
-// ── Winner gate ───────────────────────────────────────────────────────────
-
 describe("Winner API — gate on all picks submitted", () => {
   it("blocks resolution when a participant has not submitted picks", async () => {
     const { code, creatorToken } = await startedTournament();
@@ -77,8 +75,6 @@ describe("Winner API — gate on all picks submitted", () => {
     expect(res.status).toBe(200);
   });
 });
-
-// ── Late joiner ───────────────────────────────────────────────────────────
 
 describe("Late joiner", () => {
   it("gets joinedAtRound set to the current active round", async () => {
