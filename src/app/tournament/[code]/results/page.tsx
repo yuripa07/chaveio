@@ -18,6 +18,7 @@ type Match = { id: string; matchNumber: number; status: string; winnerId: string
 type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
 type Participant = { id: string; displayName: string; isCreator: boolean; hasSubmittedPicks: boolean };
 type Pick = { matchId: string; pickedItemId: string; isCorrect: boolean | null; pointsEarned: number };
+type RankEntry = { participantId: string; displayName: string; totalPoints: number; rank: number };
 
 type TournamentState = {
   tournament: { id: string; code: string; name: string; status: string };
@@ -33,17 +34,21 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
   const [myPicks, setMyPicks] = useState<Pick[]>([]);
+  const [rankings, setRankings] = useState<RankEntry[]>([]);
+  const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
 
   const loadData = useCallback(async (tok: string) => {
-    const [tRes, pRes] = await Promise.all([
+    const [tRes, pRes, rRes] = await Promise.all([
       fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
       fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${tok}` } }),
     ]);
     if (!tRes.ok) return null;
     const tData = (await tRes.json()) as TournamentState;
     const picks: Pick[] = pRes.ok ? (await pRes.json()).picks ?? [] : [];
-    return { tData, picks };
+    const rankings: RankEntry[] = rRes.ok ? (await rRes.json()).rankings ?? [] : [];
+    return { tData, picks, rankings };
   }, [code]);
 
   useEffect(() => {
@@ -51,11 +56,13 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     if (!stored) { router.replace(`/tournament/${code}`); return; }
     const payload = decodeTokenPayload(stored);
     setIsCreator(payload?.isCreator ?? false);
+    setMyParticipantId(payload?.participantId ?? null);
     setToken(stored);
     loadData(stored).then((result) => {
       if (!result) return;
       setState(result.tData);
       setMyPicks(result.picks);
+      setRankings(result.rankings);
     });
   }, [code, loadData, router]);
 
@@ -66,6 +73,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         if (!result) return;
         setState(result.tData);
         setMyPicks(result.picks);
+        setRankings(result.rankings);
         if (result.tData.tournament.status === "FINISHED") clearInterval(interval);
       });
     }, 4000);
@@ -146,6 +154,38 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
             <Stat label="Pendentes" value={(myPicks.length - resolvedCount)} />
           </div>
         </div>
+
+        {/* Rankings table */}
+        {rankings.length > 1 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking</h2>
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-left">
+                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400">#</th>
+                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400">Nome</th>
+                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400 text-right">Pontos</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {rankings.map((entry) => {
+                    const isMe = entry.participantId === myParticipantId;
+                    return (
+                      <tr key={entry.participantId} className={isMe ? "bg-indigo-50" : ""}>
+                        <td className="px-4 py-3 text-sm font-bold text-zinc-400">{entry.rank}</td>
+                        <td className={["px-4 py-3", isMe ? "font-semibold text-indigo-700" : "text-zinc-800"].join(" ")}>
+                          {entry.displayName}{isMe && " (você)"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-zinc-800">{entry.totalPoints}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Picks breakdown */}
         {resolvedCount > 0 && (

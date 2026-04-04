@@ -97,6 +97,13 @@ export async function getPicks(token: string, tournamentCode: string) {
   return GET(req("GET", `/api/picks?tournamentCode=${tournamentCode}`, undefined, token));
 }
 
+export async function getRankings(code: string, token: string | null) {
+  const { GET } = await import("@/app/api/tournaments/[code]/rankings/route");
+  return GET(req("GET", `/api/tournaments/${code}/rankings`, undefined, token), {
+    params: Promise.resolve({ code }),
+  });
+}
+
 /**
  * Builds and submits a valid full-bracket prediction for a participant.
  * Always picks slot position 1 items, cascading deterministically through rounds.

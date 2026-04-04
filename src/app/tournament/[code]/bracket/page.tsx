@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { decodeTokenPayload } from "@/lib/token-client";
 import { getStoredToken } from "@/lib/token-storage";
 import BracketView from "@/components/BracketView";
@@ -267,6 +268,12 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                 <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
               </svg>
               Palpites enviados — acompanhe o resultado ao vivo!
+              <Link
+                href={`/tournament/${code}/results`}
+                className="ml-auto shrink-0 rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+              >
+                Ver ranking →
+              </Link>
             </div>
           )}
 

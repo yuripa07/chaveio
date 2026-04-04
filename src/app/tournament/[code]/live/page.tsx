@@ -18,6 +18,7 @@ type Match = { id: string; matchNumber: number; status: string; winnerId: string
 type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
 
 type Participant = { id: string; displayName: string; hasSubmittedPicks: boolean };
+type RankEntry = { participantId: string; displayName: string; totalPoints: number; rank: number };
 
 type TournamentState = {
   tournament: { id: string; code: string; name: string; status: string };
@@ -32,13 +33,18 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
+  const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [resolving, setResolving] = useState<string | null>(null);
   const [winnerError, setWinnerError] = useState("");
 
   const loadState = useCallback(async (tok: string) => {
-    const res = await fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } });
-    if (!res.ok) return null;
-    return (await res.json()) as TournamentState;
+    const [tRes, rRes] = await Promise.all([
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${tok}` } }),
+    ]);
+    if (!tRes.ok) return null;
+    const rankingsData: RankEntry[] = rRes.ok ? (await rRes.json()).rankings ?? [] : [];
+    return { state: (await tRes.json()) as TournamentState, rankings: rankingsData };
   }, [code]);
 
   useEffect(() => {
@@ -46,10 +52,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     if (!stored) { router.replace(`/tournament/${code}`); return; }
     if (!decodeTokenPayload(stored)?.isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
     setToken(stored);
-    loadState(stored).then((s) => {
-      if (!s) return;
-      if (s.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
-      setState(s);
+    loadState(stored).then((result) => {
+      if (!result) return;
+      if (result.state.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
+      setState(result.state);
+      setRankings(result.rankings);
     });
   }, [code, loadState, router]);
 
@@ -68,10 +75,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         setWinnerError(body.error ?? "Erro ao salvar vencedor");
         return;
       }
-      const s = await loadState(token);
-      if (!s) return;
-      if (s.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
-      setState(s);
+      const result = await loadState(token);
+      if (!result) return;
+      if (result.state.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
+      setState(result.state);
+      setRankings(result.rankings);
     } finally {
       setResolving(null);
     }
@@ -205,6 +213,33 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
             <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
           </div>
         </section>
+
+        {/* Rankings table */}
+        {rankings.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking atual</h2>
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-left">
+                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400">#</th>
+                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400">Nome</th>
+                    <th className="px-4 py-2.5 text-xs font-semibold text-zinc-400 text-right">Pontos</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {rankings.map((entry) => (
+                    <tr key={entry.participantId}>
+                      <td className="px-4 py-3 text-sm font-bold text-zinc-400">{entry.rank}</td>
+                      <td className="px-4 py-3 text-zinc-800">{entry.displayName}</td>
+                      <td className="px-4 py-3 text-right font-bold text-zinc-800">{entry.totalPoints}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
