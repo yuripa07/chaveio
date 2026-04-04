@@ -114,14 +114,14 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
             ? "/"
             : isCreator
             ? `/tournament/${code}/live`
-            : `/tournament/${code}`
+            : `/tournament/${code}/bracket`
         }
         backLabel={
           isFinished
             ? "Início"
             : isCreator
             ? "Resolver partidas"
-            : "Sala de espera"
+            : "Meus palpites"
         }
         rightSlot={statusBadge}
       />

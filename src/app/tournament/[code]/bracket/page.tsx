@@ -249,8 +249,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       <TournamentHeader
         code={code}
         name={state.tournament.name}
-        backHref={`/tournament/${code}`}
-        backLabel="Sala de espera"
+        backHref={isLobby ? `/tournament/${code}` : "/"}
+        backLabel={isLobby ? "Sala de espera" : "Início"}
         rightSlot={statusBadge}
       />
 
