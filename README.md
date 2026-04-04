@@ -80,7 +80,3 @@ src/
 ├── constants/                      # Constantes da aplicacao
 └── types/                          # Interfaces TypeScript
 ```
-
-## Licenca
-
-Projeto privado.
