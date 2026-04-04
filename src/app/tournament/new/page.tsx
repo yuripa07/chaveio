@@ -130,7 +130,7 @@ export default function NewTournament() {
                 onChange={(event) => setName(event.target.value)}
                 required
                 autoFocus
-                placeholder="Ex: Melhor filme de todos os tempos"
+                placeholder="Ex: Copa do Mundo, Oscar 2025…"
                 className={INPUT_CLASS}
               />
             </FormField>
@@ -155,7 +155,7 @@ export default function NewTournament() {
                       value={value}
                       onChange={(event) => handleItemChange(index, event.target.value)}
                       onKeyDown={(event) => handleItemKeyDown(index, event)}
-                      placeholder={index === 0 ? "Ex: Brasil" : `Item ${index + 1}`}
+                      placeholder={`Item ${index + 1}`}
                       className={cn(INPUT_CLASS, "py-2")}
                     />
                     {value.trim() && index < items.length - 1 && (
@@ -197,7 +197,7 @@ export default function NewTournament() {
                               return next;
                             });
                           }}
-                          placeholder={isFinal ? "Ex: Melhor no geral" : `Ex: Melhor ${["bandeira", "culinária", "idioma", "cultura"][roundIndex] ?? "atributo"}`}
+                          placeholder={isFinal ? "Ex: Grande Final" : `Ex: ${["Fase de grupos", "Quartas de final", "Semifinal"][roundIndex] ?? "Nome da fase"}`}
                           className={cn(INPUT_CLASS, "py-2 flex-1")}
                         />
                       </div>
@@ -219,7 +219,7 @@ export default function NewTournament() {
                     value={creatorName}
                     onChange={(event) => setCreatorName(event.target.value)}
                     required
-                    placeholder="Alice"
+                    placeholder="Seu nome"
                     className={INPUT_CLASS}
                   />
                 </FormField>

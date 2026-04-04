@@ -96,7 +96,7 @@ export default function Home() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Ex: ABC2XY"
+                    placeholder="XXXXXX"
                     value={code}
                     onChange={handleCodeChange}
                     maxLength={TOURNAMENT_CODE_LENGTH}
