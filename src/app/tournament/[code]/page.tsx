@@ -3,6 +3,7 @@
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff } from "lucide-react";
 import { decodeTokenPayload } from "@/lib/token-client";
 import { getStoredToken, setStoredToken } from "@/lib/token-storage";
 import { cn } from "@/lib/cn";
@@ -11,7 +12,8 @@ import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
 import { BackLink } from "@/components/back-link";
 import { ErrorAlert } from "@/components/error-alert";
 import { LobbyCTA } from "@/components/lobby-cta";
-import { PageSpinner } from "@/components/page-spinner";
+import { PageSkeleton } from "@/components/page-spinner";
+import { Spinner } from "@/components/spinner";
 import type { Participant, TournamentState } from "@/types/tournament";
 
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
@@ -23,13 +25,17 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const [isCreator, setIsCreator] = useState(false);
   const [joinName, setJoinName] = useState("");
   const [joinPassword, setJoinPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [copied, setCopied] = useState(false);
 
-  const fetchState = useCallback(async (token: string) => {
+  const fetchState = useCallback(async (token: string, signal?: AbortSignal) => {
     const response = await fetch(`/api/tournaments/${code}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal,
     });
     if (!response.ok) return null;
     return (await response.json()) as TournamentState;
@@ -37,11 +43,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
   useEffect(() => {
     const stored = getStoredToken(code);
-    if (!stored) return;
+    if (!stored) { setLoadingInitial(false); return; }
     setToken(stored);
     const creator = decodeTokenPayload(stored)?.isCreator ?? false;
     setIsCreator(creator);
     fetchState(stored).then((tournamentData) => {
+      setLoadingInitial(false);
       if (!tournamentData) return;
       setTournamentData(tournamentData);
       if (tournamentData.tournament.status === TournamentStatus.ACTIVE)
@@ -53,8 +60,9 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
   useEffect(() => {
     if (!token || tournamentData?.tournament.status !== TournamentStatus.LOBBY) return;
+    const controller = new AbortController();
     const interval = setInterval(() => {
-      fetchState(token).then((tournamentData) => {
+      fetchState(token, controller.signal).then((tournamentData) => {
         if (!tournamentData) return;
         setTournamentData(tournamentData);
         if (tournamentData.tournament.status === TournamentStatus.ACTIVE) {
@@ -64,9 +72,9 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           clearInterval(interval);
           router.replace(`/tournament/${code}/results`);
         }
-      });
+      }).catch(() => {});
     }, POLL_INTERVAL_LOBBY);
-    return () => clearInterval(interval);
+    return () => { controller.abort(); clearInterval(interval); };
   }, [token, tournamentData?.tournament.status, fetchState, code, router, isCreator]);
 
   async function handleJoin(event: React.FormEvent) {
@@ -107,6 +115,16 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     }
   }
 
+  function handleCopyCode() {
+    const url = `${window.location.origin}/tournament/${code}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  if (loadingInitial) return <PageSkeleton />;
+
   /* ── Join screen (not yet authenticated) ── */
   if (!token) {
     return (
@@ -117,37 +135,70 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
             <div className="text-center">
-              <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-100">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 font-mono text-sm font-bold tracking-widest text-zinc-600 shadow-sm">
+                <Hash className="h-3.5 w-3.5 text-zinc-400" />
                 {code}
-              </span>
-              <h1 className="mt-3 text-2xl font-extrabold tracking-tight">Entrar no torneio</h1>
-              <p className="mt-1 text-sm text-zinc-500">Digite seu nome e senha para entrar.</p>
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight">Entrar no torneio</h1>
+              <p className="mt-1 text-sm text-zinc-500">
+                Escolha um nome para aparecer no placar e informe a senha do torneio.
+              </p>
             </div>
+
             <form onSubmit={handleJoin} className="space-y-3">
-              <input
-                type="text"
-                placeholder="Seu nome"
-                value={joinName}
-                onChange={(event) => setJoinName(event.target.value)}
-                required
-                autoFocus
-                className={cn(INPUT_CLASS, "px-4 py-3")}
-              />
-              <input
-                type="password"
-                placeholder="Senha"
-                value={joinPassword}
-                onChange={(event) => setJoinPassword(event.target.value)}
-                required
-                className={cn(INPUT_CLASS, "px-4 py-3")}
-              />
+              {/* Name field */}
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Seu nome no placar"
+                  value={joinName}
+                  onChange={(event) => setJoinName(event.target.value)}
+                  required
+                  autoFocus
+                  className={cn(INPUT_CLASS, "pl-10 py-3")}
+                />
+              </div>
+
+              {/* Password field with toggle */}
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Senha do torneio"
+                  value={joinPassword}
+                  onChange={(event) => setJoinPassword(event.target.value)}
+                  required
+                  className={cn(INPUT_CLASS, "pl-10 pr-10 py-3")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
               {joinError && <ErrorAlert message={joinError} />}
+
               <button
                 type="submit"
-                disabled={joining}
-                className={PRIMARY_BUTTON_CLASS}
+                disabled={joining || !joinName.trim() || !joinPassword}
+                className={cn("flex items-center justify-center gap-2", PRIMARY_BUTTON_CLASS)}
               >
-                {joining ? "Entrando…" : "Entrar no torneio"}
+                {joining ? (
+                  <>
+                    <Spinner size="sm" />
+                    Entrando…
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    Entrar no torneio
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -156,7 +207,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     );
   }
 
-  if (!tournamentData) return <PageSpinner />;
+  if (!tournamentData) return <PageSkeleton />;
 
   const { tournament, participants, items } = tournamentData;
 
@@ -164,12 +215,33 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     <main className="flex min-h-screen flex-col bg-zinc-50">
       <div className="border-b border-zinc-100 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <Link href="/" className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+          <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+            <Trophy className="h-4 w-4" />
             Chaveio
           </Link>
-          <span className="rounded-full border border-zinc-200 px-3 py-1 font-mono text-xs font-semibold tracking-widest text-zinc-500">
-            {tournament.code}
-          </span>
+          {/* Copy-link button with feedback */}
+          <button
+            onClick={handleCopyCode}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+              copied
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50"
+            )}
+            title="Copiar link do torneio"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Link copiado!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" />
+                Compartilhar
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -178,17 +250,41 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">{tournament.name}</h1>
-              <p className="mt-0.5 text-sm text-zinc-500">{tournament.theme}</p>
+              {tournament.theme && <p className="mt-0.5 text-sm text-zinc-500">{tournament.theme}</p>}
             </div>
             <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
               Sala de espera
             </span>
           </div>
 
+          {/* Invite code banner */}
+          <div className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-white px-5 py-3 shadow-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+              <Hash className="h-4 w-4 text-indigo-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xxs font-semibold uppercase tracking-wider text-zinc-400">Código do torneio</p>
+              <p className="font-mono text-lg font-bold tracking-widest text-zinc-800">{code}</p>
+            </div>
+            <button
+              onClick={handleCopyCode}
+              className={cn(
+                "flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all",
+                copied
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copiado!" : "Copiar link"}
+            </button>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Participants */}
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
+                <User className="h-3.5 w-3.5" />
                 Participantes · {participants.length}
               </h2>
               <ul className="space-y-2">
@@ -200,14 +296,14 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                     <span className="flex-1 text-sm font-medium">{participant.displayName}</span>
                     <div className="flex items-center gap-1.5">
                       {participant.isCreator && (
-                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xxs font-semibold text-indigo-600">
                           criador
                         </span>
                       )}
-                      {participant.hasSubmittedPicks && (
-                        <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 text-emerald-500">
-                          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
-                        </svg>
+                      {participant.hasSubmittedPicks ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label="Palpites enviados" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-zinc-200" aria-label="Palpites pendentes" />
                       )}
                     </div>
                   </li>
@@ -217,13 +313,14 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
             {/* Items */}
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
+                <Trophy className="h-3.5 w-3.5" />
                 Chaveamento · {items.length} itens
               </h2>
               <ul className="space-y-1.5">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-center gap-2 text-sm">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-[10px] font-bold text-zinc-500">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
                       {item.seed}
                     </span>
                     <span className="text-zinc-700">{item.name}</span>
