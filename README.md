@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chaveio
 
-## Getting Started
+App de previsao de chaves estilo March Madness para eventos de team bonding. Antes do torneio comecar, cada participante preenche sua chave completa. Os palpites ficam privados ate o criador resolver cada rodada. Pontos sao atribuidos automaticamente.
 
-First, run the development server:
+## Como Funciona
+
+1. **Criador** monta o torneio com os itens (4, 8, 16 ou 32) e compartilha o codigo
+2. **Participantes** entram com o codigo, criam senha e preenchem seus palpites na chave completa
+3. **Criador inicia** o torneio — palpites sao travados
+4. **A cada partida**, o criador escolhe o vencedor — pontos sao calculados automaticamente
+5. **Placar ao vivo** com ranking atualizado em tempo real
+
+## Pontuacao
+
+As rodadas valem progressivamente mais, e a final vale um bonus especial:
+
+| Itens | R1 | R2 | R3 | R4 | R5 | Final | Max |
+|-------|----|----|----|----|----|----|-----|
+| 4     | 1  | —  | —  | —  | — | 4  | **6** |
+| 8     | 1  | 2  | —  | —  | — | 8  | **14** |
+| 16    | 1  | 2  | 4  | —  | — | 16 | **40** |
+| 32    | 1  | 2  | 4  | 8  | — | 32 | **78** |
+
+## Tech Stack
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Framework | Next.js 16 (App Router) + TypeScript |
+| Estilos | Tailwind CSS 4 |
+| Banco | SQLite (dev) / PostgreSQL via Neon (prod) |
+| ORM | Prisma 7 |
+| Auth | JWT por torneio via `jose` |
+| Testes | Vitest |
+| Hosting | Vercel |
+| CI | GitHub Actions |
+
+## Rodando Localmente
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Instalar dependencias
+pnpm install
+
+# Configurar banco de dados
+cp .env.example .env
+pnpm prisma migrate dev
+
+# Iniciar servidor de desenvolvimento
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm dev              # servidor de desenvolvimento
+pnpm build            # build de producao
+pnpm test             # testes unitarios
+pnpm test:integration # testes de integracao
+pnpm lint             # eslint
+pnpm prisma studio    # GUI do banco de dados
+```
 
-## Learn More
+## Estrutura do Projeto
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── page.tsx                    # Landing: criar ou entrar
+│   ├── tournament/
+│   │   ├── new/page.tsx            # Formulario de criacao
+│   │   └── [code]/
+│   │       ├── page.tsx            # Lobby / tela de entrada
+│   │       ├── bracket/page.tsx    # Preencher chave / visualizar
+│   │       ├── live/page.tsx       # Criador resolve partidas
+│   │       └── results/page.tsx    # Placar + ranking
+│   └── api/                        # Rotas da API REST
+├── lib/                            # Logica de negocio e utilitarios
+├── components/                     # Componentes reutilizaveis
+├── constants/                      # Constantes da aplicacao
+└── types/                          # Interfaces TypeScript
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Licenca
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Projeto privado.

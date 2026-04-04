@@ -1,17 +1,14 @@
-# Frontend Conventions & Best Practices
+# Frontend Conventions
 
-Based on Vercel React Best Practices. Apply these rules when writing or modifying any component in `src/app/` or `src/components/`.
+Rules for `src/app/` and `src/components/`. Based on Vercel React best practices.
 
 ---
 
-## 1. Eliminating Waterfalls (CRITICAL)
+## 1. Parallel Fetches (CRITICAL)
 
-### Parallel fetches with Promise.all
-
-When loading page data from multiple endpoints, always fetch in parallel:
+Always fetch independent endpoints in parallel:
 
 ```typescript
-// GOOD (bracket/page.tsx already does this)
 const [tRes, pRes] = await Promise.all([
   fetch(`/api/tournaments/${code}`, { headers }),
   fetch(`/api/picks?tournamentCode=${code}`, { headers }),
@@ -22,11 +19,9 @@ Never chain independent fetches sequentially.
 
 ---
 
-## 2. Bundle Size (CRITICAL)
+## 2. Dynamic Imports (CRITICAL)
 
-### Dynamic imports for BracketView
-
-BracketView is a complex SVG-heavy component. On pages where it appears below the fold (live, results), load it dynamically:
+BracketView is SVG-heavy. On pages where it's below the fold, load dynamically:
 
 ```typescript
 import dynamic from 'next/dynamic'
@@ -36,25 +31,18 @@ const BracketView = dynamic(() => import('@/components/BracketView'), {
 })
 ```
 
-On `bracket/page.tsx` where BracketView is the primary content, keep the static import.
+- **Static import**: `bracket/page.tsx` (BracketView is primary content)
+- **Dynamic import**: `live/page.tsx`, `results/page.tsx` (BracketView is secondary)
 
-### No barrel files
-
-Never create `index.ts` files that re-export from multiple modules. Always import from the specific file.
+Never create barrel files (`index.ts`).
 
 ---
 
-## 3. Re-render Optimization (MEDIUM)
+## 3. useMemo for Derived Data (MEDIUM)
 
-### useMemo for expensive derived values
-
-Any computation that creates new objects/arrays from state should use `useMemo`:
+Wrap expensive computations that create new objects/arrays:
 
 ```typescript
-// WRONG: new object every render, causes BracketView to re-render
-const itemMap = Object.fromEntries(state.items.map(it => [it.id, it]))
-
-// RIGHT: stable reference unless items change
 const itemMap = useMemo(
   () => Object.fromEntries(state.items.map(it => [it.id, it])),
   [state.items]
@@ -63,77 +51,61 @@ const itemMap = useMemo(
 
 Apply to: `itemMap`, `augmentRounds()`, `readOnlyRounds`, `myPickMap`.
 
-### No inline components or IIFEs in JSX
+---
 
-Never define components inside other components -- they remount on every render:
+## 4. No Inline Components (MEDIUM)
 
-```typescript
-// WRONG (lobby page.tsx line ~256)
-{tournament.status === "LOBBY" && (() => { ... })()}
-
-// RIGHT: extract to a named component
-function LobbyCTA({ tournament, participants, ... }: Props) { ... }
-```
-
-### Derive state during render, not with useEffect
-
-If a value can be computed from current state, don't use useEffect + setState:
+Never define components or IIFEs inside JSX. Extract to named components:
 
 ```typescript
-// WRONG (new/page.tsx)
-useEffect(() => {
-  if (numRounds === null) return
-  setRoundNames(prev => ...)
-}, [numRounds])
+// WRONG
+{condition && (() => { ... })()}
 
-// RIGHT: compute during render
-const roundNames = useMemo(() => {
-  if (numRounds === null) return []
-  return Array.from({ length: numRounds }, (_, i) => existingNames[i] ?? '')
-}, [numRounds, existingNames])
+// RIGHT
+<LobbyCTA tournament={tournament} participants={participants} />
 ```
 
-### Functional setState
+---
+
+## 5. Derive State During Render (MEDIUM)
+
+If a value can be computed from current state, compute it — don't use useEffect + setState:
+
+```typescript
+// WRONG
+useEffect(() => { setDerived(computeFrom(state)) }, [state])
+
+// RIGHT
+const derived = useMemo(() => computeFrom(state), [state])
+```
+
+---
+
+## 6. Functional setState (HIGH)
 
 When updating state based on previous value, always use the function form:
 
 ```typescript
-// WRONG
-setPicks({ ...picks, [matchId]: itemId })
-
-// RIGHT
 setPicks(prev => ({ ...prev, [matchId]: itemId }))
 ```
 
 ---
 
-## 4. Client-Side Data Fetching (MEDIUM-HIGH)
+## 7. localStorage Safety (HIGH)
 
-### localStorage safety
-
-Always wrap localStorage in try-catch. It throws in incognito mode (Safari), when storage is full, or when disabled:
+Always use the wrappers from `lib/token-storage.ts`:
 
 ```typescript
-function getToken(code: string): string | null {
-  try {
-    return localStorage.getItem(`chaveio_token_${code}`)
-  } catch {
-    return null
-  }
-}
-
-function setToken(code: string, token: string): void {
-  try {
-    localStorage.setItem(`chaveio_token_${code}`, token)
-  } catch {
-    // silently fail -- app still works via API
-  }
-}
+import { getStoredToken, setStoredToken } from '@/lib/token-storage'
 ```
 
-### Polling with AbortController
+These wrap `localStorage` in try-catch (throws in incognito Safari, storage full, disabled).
 
-All polling intervals should use AbortController to cancel in-flight requests on unmount:
+---
+
+## 8. Polling with AbortController (HIGH)
+
+All polling must use AbortController to cancel in-flight requests on unmount:
 
 ```typescript
 useEffect(() => {
@@ -147,7 +119,7 @@ useEffect(() => {
       .catch(err => {
         if (err.name !== 'AbortError') console.error(err)
       })
-  }, 5000)
+  }, POLL_INTERVAL)
 
   return () => {
     controller.abort()
@@ -156,48 +128,55 @@ useEffect(() => {
 }, [shouldPoll])
 ```
 
----
-
-## 5. Shared Components
-
-### Extract duplicated UI
-
-These components are duplicated across 3-4 files and should be extracted to `src/components/`:
-
-| Component | Files | Target |
-|-----------|-------|--------|
-| `Spinner` | bracket, live, results, lobby | `src/components/Spinner.tsx` |
-| Checkmark SVG icon | bracket, results, lobby, BracketView | `src/components/icons.tsx` |
-| Error/warning banners | bracket, live, lobby | `src/components/Alert.tsx` |
-| Page header bar | bracket, live, results, lobby | `src/components/PageHeader.tsx` |
+Poll intervals are defined in `constants/tournament.ts` (lobby=3s, bracket=5s, results=4s).
 
 ---
 
-## 6. Rendering Performance (MEDIUM)
+## 9. Ternary over && (LOW)
 
-### Use ternary over && when condition can be falsy non-boolean
+When condition could be `0`, `NaN`, or falsy non-boolean:
 
 ```typescript
-// SAFE (boolean condition)
+// SAFE (boolean)
 {isCreator && <Badge>criador</Badge>}
 
 // UNSAFE if count could be 0
 {count && <Badge>{count}</Badge>}  // renders "0"
 
-// SAFE alternative
+// SAFE
 {count > 0 ? <Badge>{count}</Badge> : null}
 ```
 
-### Stable callback references
+---
+
+## 10. Stable Callback References (LOW)
 
 Use `useCallback` for callbacks passed to child components (especially BracketView's `onPick`):
 
 ```typescript
 const handlePick = useCallback((matchId: string, itemId: string) => {
-  setPicks(prev => {
-    const newPicks = clearDownstream(matchId, rounds, prev)
-    return { ...newPicks, [matchId]: itemId }
-  })
-  setSaved(false)
+  setPicks(prev => { ... })
 }, [rounds])
 ```
+
+---
+
+## 11. Shared Components
+
+Reusable components live in `src/components/`. Always check if one exists before creating inline UI:
+
+| Component | Usage |
+|-----------|-------|
+| `spinner.tsx` | Inline loading spinner (sm/md/lg) |
+| `page-spinner.tsx` | Full-page loading (PageSpinner + PageSkeleton) |
+| `error-alert.tsx` | Red error banner |
+| `info-banner.tsx` | Info/warning banner |
+| `tournament-header.tsx` | Sticky header with code/name/back |
+| `rankings-table.tsx` | Leaderboard (highlights current user) |
+| `back-link.tsx` | Back navigation arrow |
+| `form-field.tsx` | Labeled input wrapper |
+| `score-stat.tsx` | Score display card |
+| `pulse-dot.tsx` | Animated status dot |
+| `lobby-cta.tsx` | Lobby call-to-action |
+
+Shared Tailwind classes are in `constants/styles.ts` (`INPUT_CLASS`, `PRIMARY_BUTTON_CLASS`).
