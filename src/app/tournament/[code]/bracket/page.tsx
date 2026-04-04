@@ -4,95 +4,24 @@ import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send, CheckCircle2, BarChart2 } from "lucide-react";
-import { decodeTokenPayload } from "@/lib/token-client";
-import { getStoredToken } from "@/lib/token-storage";
+import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { usePolling } from "@/hooks/use-polling";
+import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
 import BracketView from "@/components/BracketView";
 import { PageSpinner } from "@/components/page-spinner";
 import { TournamentHeader } from "@/components/tournament-header";
 import { Spinner } from "@/components/spinner";
-import { getFeederMatches, getNextRoundSlot } from "@/lib/bracket";
-import type { TournamentState, BracketRound, MatchSlot } from "@/types/tournament";
+import type { TournamentState } from "@/types/tournament";
 
 type BracketPageState = TournamentState & { myPicks: Record<string, string> };
-
-/** Compute virtual slots for rounds after startRound based on participant's own picks */
-function augmentRounds(
-  rounds: BracketRound[],
-  picks: Record<string, string>,
-  startRound: number
-): BracketRound[] {
-  const roundByNumber = new Map(rounds.map((round) => [round.roundNumber, round]));
-
-  return rounds.map((round) => {
-    if (round.roundNumber <= startRound) return round;
-
-    const previousRound = roundByNumber.get(round.roundNumber - 1)!;
-    const augmentedMatches = round.matches.map((match) => {
-      if (match.slots.length >= 2) return match;
-      const [feeder1MatchNumber, feeder2MatchNumber] = getFeederMatches(match.matchNumber);
-      const feeder1 = previousRound.matches.find((m) => m.matchNumber === feeder1MatchNumber);
-      const feeder2 = previousRound.matches.find((m) => m.matchNumber === feeder2MatchNumber);
-      const pick1 = feeder1 ? picks[feeder1.id] : null;
-      const pick2 = feeder2 ? picks[feeder2.id] : null;
-      const virtualSlots: MatchSlot[] = [];
-      if (pick1) virtualSlots.push({ id: `v-${match.id}-1`, itemId: pick1, position: 1 });
-      if (pick2) virtualSlots.push({ id: `v-${match.id}-2`, itemId: pick2, position: 2 });
-      return { ...match, slots: virtualSlots };
-    });
-
-    return { ...round, matches: augmentedMatches };
-  });
-}
-
-/** When a pick changes, clear any downstream picks that are now invalid */
-function clearDownstream(
-  changedMatchId: string,
-  rounds: BracketRound[],
-  picks: Record<string, string>
-): Record<string, string> {
-  const updated = { ...picks };
-
-  let roundNumber = -1;
-  let matchNumber = -1;
-  for (const round of rounds) {
-    for (const match of round.matches) {
-      if (match.id === changedMatchId) {
-        roundNumber = round.roundNumber;
-        matchNumber = match.matchNumber;
-        break;
-      }
-    }
-  }
-  if (roundNumber === -1) return updated;
-
-  const previousPickedItem = picks[changedMatchId];
-
-  function cascade(currentRoundNumber: number, currentMatchNumber: number, oldItem: string | undefined) {
-    const { matchIndex } = getNextRoundSlot(currentMatchNumber);
-    const nextMatchNumber = matchIndex + 1;
-    const nextRound = rounds.find((round) => round.roundNumber === currentRoundNumber + 1);
-    if (!nextRound) return;
-    const nextMatch = nextRound.matches.find((match) => match.matchNumber === nextMatchNumber);
-    if (!nextMatch) return;
-    const currentPick = updated[nextMatch.id];
-    if (currentPick && currentPick === oldItem) {
-      delete updated[nextMatch.id];
-      cascade(currentRoundNumber + 1, nextMatchNumber, currentPick);
-    }
-  }
-
-  cascade(roundNumber, matchNumber, previousPickedItem);
-  return updated;
-}
 
 export default function BracketPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
+  const { token, participantId } = useTournamentToken(code);
 
-  const [token, setToken] = useState<string | null>(null);
-  const [participantId, setParticipantId] = useState<string | null>(null);
   const [state, setState] = useState<BracketPageState | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -100,16 +29,16 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   const [error, setError] = useState("");
 
   const loadState = useCallback(
-    async (token: string, signal?: AbortSignal) => {
-      const [tournamentResponse, picksResponse] = await Promise.all([
-        fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
-        fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+    async (authToken: string, signal?: AbortSignal) => {
+      const [tournamentRes, picksRes] = await Promise.all([
+        fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
+        fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
       ]);
-      if (!tournamentResponse.ok) return null;
-      const tournamentData = await tournamentResponse.json();
+      if (!tournamentRes.ok) return null;
+      const tournamentData = await tournamentRes.json();
       const myPicks: Record<string, string> = {};
-      if (picksResponse.ok) {
-        for (const pick of (await picksResponse.json()).picks ?? []) {
+      if (picksRes.ok) {
+        for (const pick of (await picksRes.json()).picks ?? []) {
           myPicks[pick.matchId] = pick.pickedItemId;
         }
       }
@@ -118,13 +47,10 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     [code]
   );
 
+  // Initial load — redirect if no token
   useEffect(() => {
-    const stored = getStoredToken(code);
-    if (!stored) { router.replace(`/tournament/${code}`); return; }
-    const payload = decodeTokenPayload(stored);
-    setToken(stored);
-    setParticipantId(payload?.participantId ?? null);
-    loadState(stored).then((newState) => {
+    if (!token) { router.replace(`/tournament/${code}`); return; }
+    loadState(token).then((newState) => {
       if (!newState) return;
       if (newState.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -133,25 +59,24 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       setState(newState);
       setPicks(newState.myPicks);
     });
-  }, [code, loadState, router]);
+  }, [token, code, loadState, router]);
 
-  useEffect(() => {
-    if (!token || !state || state.tournament.status !== TournamentStatus.ACTIVE) return;
-    const controller = new AbortController();
-    const interval = setInterval(() => {
-      loadState(token, controller.signal).then((newState) => {
-        if (!newState) return;
-        if (newState.tournament.status === TournamentStatus.FINISHED) {
-          clearInterval(interval);
-          router.replace(`/tournament/${code}/results`);
-          return;
-        }
-        setState(newState);
-        setPicks((previous) => ({ ...newState.myPicks, ...previous }));
-      }).catch(() => {});
-    }, POLL_INTERVAL_BRACKET);
-    return () => { controller.abort(); clearInterval(interval); };
-  }, [token, code, loadState, router, state?.tournament.status]);
+  // Poll while active
+  usePolling(
+    async (signal) => {
+      if (!token) return;
+      const newState = await loadState(token, signal);
+      if (!newState) return;
+      if (newState.tournament.status === TournamentStatus.FINISHED) {
+        router.replace(`/tournament/${code}/results`);
+        return;
+      }
+      setState(newState);
+      setPicks((prev) => ({ ...newState.myPicks, ...prev }));
+    },
+    POLL_INTERVAL_BRACKET,
+    !!token && state?.tournament.status === TournamentStatus.ACTIVE
+  );
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -183,7 +108,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     }
   }
 
-  const me = state?.participants.find((participant) => participant.id === participantId);
+  // Derived state
+  const me = state?.participants.find((p) => p.id === participantId);
   const joinedAtRound = me?.joinedAtRound ?? null;
   const startRound = joinedAtRound ?? 1;
   const alreadySubmitted = me?.hasSubmittedPicks ?? false;
@@ -200,13 +126,12 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   );
 
   const readOnlyRounds = useMemo(
-    () => new Set((state?.rounds ?? []).filter((round) => round.roundNumber < startRound).map((round) => round.roundNumber)),
+    () => new Set((state?.rounds ?? []).filter((r) => r.roundNumber < startRound).map((r) => r.roundNumber)),
     [state?.rounds, startRound]
   );
 
   const { pickedCount, eligibleCount } = useMemo(() => {
-    let picked = 0;
-    let eligible = 0;
+    let picked = 0, eligible = 0;
     for (const round of augmented) {
       if (round.roundNumber < startRound) continue;
       for (const match of round.matches) {
@@ -288,7 +213,6 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
             {!viewOnly && (
               <div className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm space-y-3">
-                {/* Progress bar */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-zinc-500">

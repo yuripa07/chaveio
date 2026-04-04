@@ -1,20 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireCreator, AuthError } from "@/lib/auth";
+import { handleRequest } from "@/lib/api-utils";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
-  let payload;
-  try {
-    payload = await requireCreator(req);
-  } catch (e) {
-    if (e instanceof AuthError) {
-      return Response.json({ error: e.message }, { status: e.status });
-    }
-    throw e;
-  }
+  const auth = await handleRequest(req, "creator");
+  if (!auth.ok) return auth.response;
 
   const { code } = await params;
 
@@ -26,7 +19,7 @@ export async function POST(
     },
   });
 
-  if (!tournament || tournament.id !== payload.tournamentId) {
+  if (!tournament || tournament.id !== auth.payload.tournamentId) {
     return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
 
@@ -34,7 +27,6 @@ export async function POST(
     return Response.json({ error: "Tournament already started" }, { status: 409 });
   }
 
-  // All participants must have submitted full bracket picks
   const pending = tournament.participants.filter((p) => !p.hasSubmittedPicks);
   if (pending.length > 0) {
     return Response.json(
@@ -46,21 +38,16 @@ export async function POST(
     );
   }
 
-  // Bracket was already created at tournament creation — just activate round 1
   const round1 = tournament.rounds.find((r) => r.roundNumber === 1);
   if (!round1) {
     return Response.json({ error: "Bracket not found" }, { status: 500 });
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.round.update({
-      where: { id: round1.id },
-      data: { status: "ACTIVE" },
-    });
-    await tx.tournament.update({
-      where: { id: tournament.id },
-      data: { status: "ACTIVE", startedAt: new Date() },
-    });
+    await Promise.all([
+      tx.round.update({ where: { id: round1.id }, data: { status: "ACTIVE" } }),
+      tx.tournament.update({ where: { id: tournament.id }, data: { status: "ACTIVE", startedAt: new Date() } }),
+    ]);
   });
 
   return Response.json({ success: true });

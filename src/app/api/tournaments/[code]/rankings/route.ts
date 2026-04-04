@@ -1,18 +1,13 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireParticipant, AuthError } from "@/lib/auth";
+import { handleRequest } from "@/lib/api-utils";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
-  let payload;
-  try {
-    payload = await requireParticipant(req);
-  } catch (e) {
-    if (e instanceof AuthError) return Response.json({ error: e.message }, { status: e.status });
-    throw e;
-  }
+  const auth = await handleRequest(req, "participant");
+  if (!auth.ok) return auth.response;
 
   const { code } = await params;
 
@@ -21,7 +16,7 @@ export async function GET(
     select: { id: true, status: true },
   });
 
-  if (!tournament || tournament.id !== payload.tournamentId) {
+  if (!tournament || tournament.id !== auth.payload.tournamentId) {
     return Response.json({ error: "Torneio não encontrado" }, { status: 403 });
   }
 

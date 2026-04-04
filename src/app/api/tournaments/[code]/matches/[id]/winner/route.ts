@@ -1,69 +1,41 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireCreator, AuthError } from "@/lib/auth";
+import { handleRequest } from "@/lib/api-utils";
 import { getNextRoundSlot } from "@/lib/bracket";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string; id: string }> }
 ) {
-  // Start independent operations in parallel
-  const authPromise = requireCreator(req);
-  const bodyPromise = req.json().catch(() => null);
-  const paramsPromise = params;
+  const [auth, { code, id: matchId }] = await Promise.all([
+    handleRequest<{ winnerId: string }>(req, "creator", { parseBody: true }),
+    params,
+  ]);
+  if (!auth.ok) return auth.response;
 
-  let payload;
-  try {
-    payload = await authPromise;
-  } catch (e) {
-    if (e instanceof AuthError) {
-      return Response.json({ error: e.message }, { status: e.status });
-    }
-    throw e;
-  }
-
-  const [body, { code, id: matchId }] = await Promise.all([bodyPromise, paramsPromise]);
-
-  if (!body) {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const { winnerId } = body as { winnerId: string };
+  const { winnerId } = auth.body;
 
   const match = await prisma.match.findUnique({
     where: { id: matchId },
-    include: {
-      slots: true,
-      round: true,
-      tournament: true,
-    },
+    include: { slots: true, round: true, tournament: true },
   });
 
   if (!match || match.tournament.code !== code) {
     return Response.json({ error: "Match not found" }, { status: 404 });
   }
-
-  if (match.tournament.id !== payload.tournamentId) {
+  if (match.tournament.id !== auth.payload.tournamentId) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
-
   if (match.status === "COMPLETE") {
     return Response.json({ error: "Match already resolved" }, { status: 409 });
   }
-
-  const validItem = match.slots.find((s) => s.itemId === winnerId);
-  if (!validItem) {
+  if (!match.slots.some((s) => s.itemId === winnerId)) {
     return Response.json({ error: "Winner not in match slots" }, { status: 400 });
   }
 
-  const { matchIndex, slotPosition } = getNextRoundSlot(match.matchNumber);
-  const pointValue = match.round.pointValue;
-  const roundNumber = match.round.roundNumber;
-  const tournamentId = match.tournament.id;
-
-  // All participants must have submitted picks before any match can be resolved
+  // All participants must have submitted picks
   const pendingCount = await prisma.participant.count({
-    where: { tournamentId, hasSubmittedPicks: false },
+    where: { tournamentId: match.tournament.id, hasSubmittedPicks: false },
   });
   if (pendingCount > 0) {
     return Response.json(
@@ -72,15 +44,17 @@ export async function POST(
     );
   }
 
-  await prisma.$transaction(async (tx) => {
-    // Mark match complete
-    await tx.match.update({
-      where: { id: matchId },
-      data: { status: "COMPLETE", winnerId },
-    });
+  const { matchIndex, slotPosition } = getNextRoundSlot(match.matchNumber);
+  const { pointValue, roundNumber } = match.round;
+  const tournamentId = match.tournament.id;
 
-    // Score picks
-    const picks = await tx.pick.findMany({ where: { matchId } });
+  await prisma.$transaction(async (tx) => {
+    // Mark match complete + score picks
+    const [, picks] = await Promise.all([
+      tx.match.update({ where: { id: matchId }, data: { status: "COMPLETE", winnerId } }),
+      tx.pick.findMany({ where: { matchId } }),
+    ]);
+
     await Promise.all(
       picks.map((pick) =>
         tx.pick.update({
@@ -93,7 +67,7 @@ export async function POST(
       )
     );
 
-    // Find next round and advance winner
+    // Advance winner to next round
     const nextRound = await tx.round.findUnique({
       where: { tournamentId_roundNumber: { tournamentId, roundNumber: roundNumber + 1 } },
       include: { matches: true },
@@ -108,24 +82,17 @@ export async function POST(
       }
     }
 
-    // Check if all matches in current round are complete
+    // Check if current round is fully complete
     const pendingMatches = await tx.match.count({
       where: { roundId: match.round.id, status: { not: "COMPLETE" } },
     });
 
     if (pendingMatches === 0) {
-      await tx.round.update({
-        where: { id: match.round.id },
-        data: { status: "COMPLETE" },
-      });
+      await tx.round.update({ where: { id: match.round.id }, data: { status: "COMPLETE" } });
 
       if (nextRound) {
-        await tx.round.update({
-          where: { id: nextRound.id },
-          data: { status: "ACTIVE" },
-        });
+        await tx.round.update({ where: { id: nextRound.id }, data: { status: "ACTIVE" } });
       } else {
-        // Final round complete → finish tournament
         await tx.tournament.update({
           where: { id: tournamentId },
           data: { status: "FINISHED", endedAt: new Date() },

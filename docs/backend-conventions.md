@@ -4,31 +4,32 @@ Rules for `src/app/api/` routes. Based on Vercel React best practices.
 
 ---
 
-## 1. Start Promises Early (CRITICAL)
+## 1. Use `handleRequest()` for Auth + Body Parsing (CRITICAL)
 
-Start independent async operations immediately. Auth, body parsing, and params resolution are independent:
+All protected routes use the `handleRequest()` helper from `lib/api-utils.ts` to eliminate auth/body boilerplate:
 
 ```typescript
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ code: string; id: string }> }
-) {
-  const authPromise = requireCreator(req)
-  const bodyPromise = req.json().catch(() => null)
-  const paramsPromise = params
+import { handleRequest } from "@/lib/api-utils";
 
-  let payload
-  try {
-    payload = await authPromise
-  } catch (e) {
-    if (e instanceof AuthError) return Response.json({ error: e.message }, { status: e.status })
-    throw e
-  }
+// Auth only (GET routes)
+const auth = await handleRequest(req, "participant");
+if (!auth.ok) return auth.response;
+// auth.payload has { participantId, tournamentId, isCreator }
 
-  const [body, { code, id }] = await Promise.all([bodyPromise, paramsPromise])
-  // ... route logic
-}
+// Auth + body parsing (POST routes)
+const auth = await handleRequest<{ winnerId: string }>(req, "creator", { parseBody: true });
+if (!auth.ok) return auth.response;
+// auth.payload + auth.body available
+
+// Parallel with params
+const [auth, { code }] = await Promise.all([
+  handleRequest<{ winnerId: string }>(req, "creator", { parseBody: true }),
+  params,
+]);
+if (!auth.ok) return auth.response;
 ```
+
+### Parallel independent operations
 
 Use `Promise.all()` for independent operations like hash + code generation:
 
@@ -37,35 +38,6 @@ const [passwordHash, code] = await Promise.all([
   bcrypt.hash(creatorPassword, 10),
   generateUniqueCode()
 ])
-```
-
----
-
-## 2. Auth Error Handling (CRITICAL)
-
-All protected routes follow this pattern:
-
-```typescript
-let payload
-try {
-  payload = await requireParticipant(req)  // or requireCreator
-} catch (e) {
-  if (e instanceof AuthError) {
-    return Response.json({ error: e.message }, { status: e.status })
-  }
-  throw e
-}
-```
-
-For body parsing:
-
-```typescript
-let body: unknown
-try {
-  body = await req.json()
-} catch {
-  return Response.json({ error: "Invalid JSON" }, { status: 400 })
-}
 ```
 
 ---
