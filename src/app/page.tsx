@@ -3,27 +3,51 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PlusCircle, LogIn, Trophy, AlertCircle, ArrowRight } from "lucide-react";
 import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
+import { Spinner } from "@/components/spinner";
+import { cn } from "@/lib/cn";
+
+// No `g` flag — avoids stale lastIndex when calling .test() repeatedly
+const VALID_CODE_CHARS = /[^A-Z2-9]/g;
+const AMBIGUOUS_CHARS = /[01IO]/i;
 
 export default function Home() {
   const router = useRouter();
   const [code, setCode] = useState("");
+  const [codeHint, setCodeHint] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
+
+  function handleCodeChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const raw = event.target.value.toUpperCase();
+    if (AMBIGUOUS_CHARS.test(raw)) {
+      setCodeHint("Códigos não usam 0, 1, I ou O — difíceis de distinguir. Use A–Z (exceto I e O) ou 2–9.");
+    } else {
+      setCodeHint(null);
+    }
+    setCode(raw.replace(VALID_CODE_CHARS, ""));
+  }
 
   function handleJoin(event: React.FormEvent) {
     event.preventDefault();
     const trimmed = code.trim().toUpperCase();
-    if (trimmed.length === TOURNAMENT_CODE_LENGTH) router.push(`/tournament/${trimmed}`);
+    if (trimmed.length !== TOURNAMENT_CODE_LENGTH) return;
+    setJoining(true);
+    router.push(`/tournament/${trimmed}`);
   }
+
+  const codeProgress = code.length / TOURNAMENT_CODE_LENGTH;
+  const codeComplete = code.length === TOURNAMENT_CODE_LENGTH;
 
   return (
     <main className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 to-white px-6 py-24">
         <div className="w-full max-w-sm space-y-10 text-center">
-          <div className="flex flex-col items-center gap-3">
+
+          {/* Brand */}
+          <div className="flex flex-col items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200">
-              <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-white" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
+              <Trophy className="h-8 w-8 text-white" />
             </div>
             <div>
               <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900">Chaveio</h1>
@@ -31,12 +55,15 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Actions */}
           <div className="space-y-3">
             <Link
               href="/tournament/new"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
+              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
             >
+              <PlusCircle className="h-4 w-4" />
               Criar torneio
+              <ArrowRight className="ml-auto h-4 w-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </Link>
 
             <div className="relative py-2">
@@ -51,22 +78,66 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleJoin} className="space-y-2">
-              <input
-                type="text"
-                placeholder="ABC123"
-                value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""))}
-                maxLength={TOURNAMENT_CODE_LENGTH}
-                spellCheck={false}
-                autoComplete="off"
-                className="w-full rounded-2xl border border-zinc-200 bg-white px-5 py-3.5 text-center text-xl font-mono font-bold tracking-[0.3em] uppercase placeholder:font-normal placeholder:tracking-widest placeholder:text-zinc-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-              />
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Ex: ABC2XY"
+                    value={code}
+                    onChange={handleCodeChange}
+                    maxLength={TOURNAMENT_CODE_LENGTH}
+                    spellCheck={false}
+                    autoComplete="off"
+                    className={cn(
+                      "w-full rounded-2xl border bg-white px-5 py-3.5 text-center text-xl font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:text-zinc-300 focus:outline-none focus:ring-2 transition",
+                      codeComplete
+                        ? "border-emerald-300 ring-0 focus:ring-emerald-400 text-emerald-700"
+                        : "border-zinc-200 focus:border-transparent focus:ring-indigo-500 text-zinc-900"
+                    )}
+                  />
+                  {/* Progress bar under input */}
+                  {code.length > 0 && !codeComplete && (
+                    <div className="absolute bottom-0 left-4 right-4 h-0.5 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className="h-full bg-indigo-400 transition-all duration-200"
+                        style={{ width: `${codeProgress * 100}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {codeHint ? (
+                  <div className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{codeHint}</span>
+                  </div>
+                ) : code.length > 0 && !codeComplete ? (
+                  <p className="text-center text-xs text-zinc-400">
+                    {code.length} / {TOURNAMENT_CODE_LENGTH} caracteres
+                  </p>
+                ) : codeComplete ? (
+                  <p className="text-center text-xs font-medium text-emerald-600">
+                    Código completo — pronto para entrar!
+                  </p>
+                ) : null}
+              </div>
+
               <button
                 type="submit"
-                disabled={code.length !== TOURNAMENT_CODE_LENGTH}
-                className="w-full rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[.98] transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={joining || !codeComplete}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[.98] transition-all disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Entrar no torneio
+                {joining ? (
+                  <>
+                    <Spinner size="sm" />
+                    Entrando…
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    Entrar no torneio
+                  </>
+                )}
               </button>
             </form>
           </div>

@@ -3,6 +3,7 @@
 import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Send, CheckCircle2, BarChart2 } from "lucide-react";
 import { decodeTokenPayload } from "@/lib/token-client";
 import { getStoredToken } from "@/lib/token-storage";
 import { cn } from "@/lib/cn";
@@ -10,6 +11,7 @@ import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament"
 import BracketView from "@/components/BracketView";
 import { PageSpinner } from "@/components/page-spinner";
 import { TournamentHeader } from "@/components/tournament-header";
+import { Spinner } from "@/components/spinner";
 import { getFeederMatches, getNextRoundSlot } from "@/lib/bracket";
 import type { TournamentState, BracketRound, MatchSlot } from "@/types/tournament";
 
@@ -98,10 +100,10 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   const [error, setError] = useState("");
 
   const loadState = useCallback(
-    async (token: string) => {
+    async (token: string, signal?: AbortSignal) => {
       const [tournamentResponse, picksResponse] = await Promise.all([
-        fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+        fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
       ]);
       if (!tournamentResponse.ok) return null;
       const tournamentData = await tournamentResponse.json();
@@ -135,8 +137,9 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
   useEffect(() => {
     if (!token || !state || state.tournament.status !== TournamentStatus.ACTIVE) return;
+    const controller = new AbortController();
     const interval = setInterval(() => {
-      loadState(token).then((newState) => {
+      loadState(token, controller.signal).then((newState) => {
         if (!newState) return;
         if (newState.tournament.status === TournamentStatus.FINISHED) {
           clearInterval(interval);
@@ -145,9 +148,9 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         }
         setState(newState);
         setPicks((previous) => ({ ...newState.myPicks, ...previous }));
-      });
+      }).catch(() => {});
     }, POLL_INTERVAL_BRACKET);
-    return () => clearInterval(interval);
+    return () => { controller.abort(); clearInterval(interval); };
   }, [token, code, loadState, router, state?.tournament.status]);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -249,15 +252,14 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         <div className="mx-auto w-full max-w-5xl space-y-6">
           {viewOnly && (
             <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700">
-              <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 shrink-0">
-                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
-              </svg>
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
               Palpites enviados — acompanhe o resultado ao vivo!
               <Link
                 href={`/tournament/${code}/results`}
-                className="ml-auto shrink-0 rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
-                Ver ranking →
+                <BarChart2 className="h-3.5 w-3.5" />
+                Ver ranking
               </Link>
             </div>
           )}
@@ -279,24 +281,59 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
             />
 
             {!viewOnly && (
-              <div className="flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={submitting || !allPicked}
-                  className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {submitting ? "Enviando…" : "Enviar palpites"}
-                </button>
-                <span className="text-sm text-zinc-400">{pickedCount} / {eligibleCount} preenchidos</span>
-                {saved && (
-                  <span className="flex items-center gap-1 text-sm font-medium text-emerald-600">
-                    <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4">
-                      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l4.5-4.5Z" />
-                    </svg>
-                    Enviado!
-                  </span>
-                )}
-                {error && <span className="text-sm text-red-500">{error}</span>}
+              <div className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm space-y-3">
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-zinc-500">
+                      {pickedCount} de {eligibleCount} palpites preenchidos
+                    </span>
+                    {allPicked && (
+                      <span className="font-semibold text-emerald-600">Tudo preenchido!</span>
+                    )}
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-300",
+                        allPicked ? "bg-emerald-500" : "bg-indigo-400"
+                      )}
+                      style={{ width: eligibleCount > 0 ? `${(pickedCount / eligibleCount) * 100}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="submit"
+                    disabled={submitting || !allPicked}
+                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? (
+                      <>
+                        <Spinner size="sm" />
+                        Enviando…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Enviar palpites
+                      </>
+                    )}
+                  </button>
+                  {!allPicked && eligibleCount > 0 && (
+                    <span className="text-xs text-zinc-400">
+                      Ainda faltam {eligibleCount - pickedCount} escolhas
+                    </span>
+                  )}
+                  {saved && (
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Palpites enviados!
+                    </span>
+                  )}
+                  {error && <span className="text-sm text-red-500">{error}</span>}
+                </div>
               </div>
             )}
           </form>

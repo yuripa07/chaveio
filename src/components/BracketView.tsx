@@ -44,7 +44,7 @@ export default function BracketView({
             <div key={round.id} className="flex flex-col" style={{ width: BRACKET_COLUMN_WIDTH + 32 }}>
               {/* Column header */}
               <div className="mb-2 px-4">
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
                   {round.name || (isLastRound ? "Final" : `Rodada ${round.roundNumber}`)}
                   <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-zinc-500">
                     {round.pointValue}pt
@@ -149,7 +149,7 @@ export default function BracketView({
                             >
                               <span
                                 className={cn(
-                                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
+                                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold",
                                   isWinner ? "bg-emerald-100 text-emerald-600" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 text-zinc-400"
                                 )}
                               >

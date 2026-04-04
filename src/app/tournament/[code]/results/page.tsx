@@ -30,11 +30,11 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
 
-  const loadData = useCallback(async (token: string) => {
+  const loadData = useCallback(async (token: string, signal?: AbortSignal) => {
     const [tournamentResponse, picksResponse, rankingsResponse] = await Promise.all([
-      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+      fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${token}` }, signal }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${token}` }, signal }),
     ]);
     if (!tournamentResponse.ok) return null;
     const tournamentData = (await tournamentResponse.json()) as TournamentState;
@@ -60,16 +60,17 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
   useEffect(() => {
     if (!token || state?.tournament.status === TournamentStatus.FINISHED) return;
+    const controller = new AbortController();
     const interval = setInterval(() => {
-      loadData(token).then((result) => {
+      loadData(token, controller.signal).then((result) => {
         if (!result) return;
         setState(result.tournamentData);
         setMyPicks(result.picks);
         setRankings(result.rankings);
         if (result.tournamentData.tournament.status === TournamentStatus.FINISHED) clearInterval(interval);
-      });
+      }).catch(() => {});
     }, POLL_INTERVAL_RESULTS);
-    return () => clearInterval(interval);
+    return () => { controller.abort(); clearInterval(interval); };
   }, [token, state?.tournament.status, loadData]);
 
   const itemMap = useMemo(
@@ -188,7 +189,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 text-sm">
-                            <span className="text-[10px] font-bold text-zinc-400">
+                            <span className="text-xxs font-bold text-zinc-400">
                               {round.name || `R${round.roundNumber}`}
                             </span>
                             <span className="font-semibold text-zinc-800 truncate">
