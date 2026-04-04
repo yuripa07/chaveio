@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { NextRequest } from "next/server";
+import { JWT_EXPIRY } from "@/constants/auth";
 
 export interface TokenPayload {
   participantId: string;
@@ -16,7 +17,7 @@ function getSecret(): Uint8Array {
 export async function signToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
+    .setExpirationTime(JWT_EXPIRY)
     .sign(getSecret());
 }
 
