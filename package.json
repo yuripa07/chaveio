@@ -10,7 +10,9 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:integration": "vitest run --config vitest.integration.config.ts --coverage"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.6.0",
@@ -34,6 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.2",
     "dotenv": "^17.4.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
