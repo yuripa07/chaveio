@@ -32,26 +32,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+          cache: npm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Apply migrations
-        run: pnpm prisma migrate deploy
+        run: npx prisma migrate deploy
 
       - name: Run unit tests
-        run: pnpm test
+        run: npm test
 
       - name: Run integration tests
-        run: pnpm run test:integration
+        run: npm run test:integration
 
       - name: Build
-        run: pnpm build
+        run: npm run build
