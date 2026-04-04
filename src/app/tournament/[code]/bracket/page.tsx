@@ -9,7 +9,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
-import BracketView from "@/components/BracketView";
+import BracketView from "@/components/bracket-view";
 import { PageSpinner } from "@/components/page-spinner";
 import { TournamentHeader } from "@/components/tournament-header";
 import { Spinner } from "@/components/spinner";

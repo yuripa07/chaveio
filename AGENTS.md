@@ -84,7 +84,7 @@ src/
 │   ├── use-polling.ts        # usePolling() — interval + AbortController cleanup
 │   └── use-tournament-token.ts # useTournamentToken() — localStorage JWT management
 ├── components/
-│   ├── BracketView.tsx       # SVG bracket visualization (pick/predict/view modes)
+│   ├── bracket-view.tsx       # SVG bracket visualization (pick/predict/view modes)
 │   ├── back-link.tsx         # Back navigation arrow
 │   ├── error-alert.tsx       # Red error banner
 │   ├── form-field.tsx        # Labeled input wrapper

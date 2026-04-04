@@ -16,7 +16,7 @@ import { Spinner } from "@/components/spinner";
 import dynamic from "next/dynamic";
 import type { TournamentState, ItemMap, RankEntry, TournamentItem } from "@/types/tournament";
 
-const BracketView = dynamic(() => import("@/components/BracketView"), {
+const BracketView = dynamic(() => import("@/components/bracket-view"), {
   loading: () => <div className="h-64 motion-safe:animate-pulse rounded-2xl bg-zinc-100" />,
 });
 
