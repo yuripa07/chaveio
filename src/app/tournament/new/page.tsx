@@ -129,6 +129,7 @@ export default function NewTournament() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required
+                autoFocus
                 placeholder="Ex: Melhor filme de todos os tempos"
                 className={INPUT_CLASS}
               />
@@ -155,7 +156,6 @@ export default function NewTournament() {
                       onChange={(event) => handleItemChange(index, event.target.value)}
                       onKeyDown={(event) => handleItemKeyDown(index, event)}
                       placeholder={index === 0 ? "Ex: Brasil" : `Item ${index + 1}`}
-                      autoFocus={index === 0}
                       className={cn(INPUT_CLASS, "py-2")}
                     />
                     {value.trim() && index < items.length - 1 && (
