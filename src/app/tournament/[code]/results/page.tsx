@@ -80,6 +80,14 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     return () => clearInterval(interval);
   }, [token, state?.tournament.status, loadData]);
 
+  const itemMap = useMemo(
+    () => Object.fromEntries((state?.items ?? []).map((it) => [it.id, it])),
+    [state?.items]
+  );
+  const myPickMap = useMemo(
+    () => Object.fromEntries(myPicks.map((p) => [p.matchId, p])),
+    [myPicks]
+  );
   if (!state) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-50">
@@ -88,14 +96,6 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     );
   }
 
-  const itemMap = useMemo(
-    () => Object.fromEntries(state.items.map((it) => [it.id, it])),
-    [state.items]
-  );
-  const myPickMap = useMemo(
-    () => Object.fromEntries(myPicks.map((p) => [p.matchId, p])),
-    [myPicks]
-  );
   let myTotalPoints = 0, resolvedCount = 0, correctCount = 0;
   for (const p of myPicks) {
     myTotalPoints += p.pointsEarned;
