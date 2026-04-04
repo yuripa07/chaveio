@@ -250,11 +250,3 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 | Set-based lookups | O(1) checking completed matches before validating picks |
 | Transaction-based cascades | Atomicity when advancing winners and scoring picks |
 | Dynamic import BracketView | SVG-heavy below fold on results/live saves initial bundle |
-
-## Implementation Phases
-
-- [x] **Phase 1** — Project setup, Prisma schema, TDD algorithms (points, bracket, codes)
-- [x] **Phase 2** — Create/join APIs + picks API + landing/lobby/bracket UI
-- [x] **Phase 3** — Start/winner APIs + live UI + leaderboard
-- [ ] **Phase 4** — Visual bracket component + mobile polish
-- [ ] **Phase 5** — Deploy to Neon + Vercel, CI green
