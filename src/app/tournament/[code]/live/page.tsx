@@ -85,6 +85,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     }
   }
 
+  const itemMap = useMemo(
+    () => Object.fromEntries((state?.items ?? []).map((it) => [it.id, it])),
+    [state?.items]
+  );
+
   if (!state) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-50">
@@ -93,10 +98,6 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     );
   }
 
-  const itemMap = useMemo(
-    () => Object.fromEntries(state.items.map((it) => [it.id, it])),
-    [state.items]
-  );
   const activeRound = state.rounds.find((r) => r.status === "ACTIVE");
   const pendingInRound = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
   const pendingPicks = state.participants.filter((p) => !p.hasSubmittedPicks);
