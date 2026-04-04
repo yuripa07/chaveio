@@ -4,6 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { getFeederMatches } from "@/lib/bracket";
 
 const BASE = "http://localhost";
 
@@ -94,4 +95,46 @@ export async function submitPicks(
 export async function getPicks(token: string, tournamentCode: string) {
   const { GET } = await import("@/app/api/picks/route");
   return GET(req("GET", `/api/picks?tournamentCode=${tournamentCode}`, undefined, token));
+}
+
+/**
+ * Builds and submits a valid full-bracket prediction for a participant.
+ * Always picks slot position 1 items, cascading deterministically through rounds.
+ * Useful for getting participants past the picks gate in lifecycle tests.
+ */
+export async function submitFullBracketPicks(token: string, code: string) {
+  const body = await getTournament(code, token).then((r) => r.json());
+  const rounds: {
+    roundNumber: number;
+    matches: { id: string; matchNumber: number; slots: { itemId: string; position: number }[] }[];
+  }[] = body.rounds;
+
+  // Map matchNumber → pickedItemId per round (for cascade computation)
+  const pickedByRoundMatch = new Map<string, string>(); // key: `${round}:${matchNum}`
+  const picks: { matchId: string; pickedItemId: string }[] = [];
+
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      let pickedItemId: string;
+
+      if (round.roundNumber === 1) {
+        // Pick the first slot item
+        pickedItemId = match.slots[0].itemId;
+      } else if (match.slots.length > 0) {
+        // Late-joiner round: real slots are populated — pick the first one
+        pickedItemId = match.slots[0].itemId;
+      } else {
+        // Future round with no real slots: derive from feeder picks
+        const [f1Num, f2Num] = getFeederMatches(match.matchNumber);
+        const prevRound = round.roundNumber - 1;
+        // Pick whoever won feeder match 1 (deterministic)
+        pickedItemId = pickedByRoundMatch.get(`${prevRound}:${f1Num}`)!;
+      }
+
+      pickedByRoundMatch.set(`${round.roundNumber}:${match.matchNumber}`, pickedItemId);
+      picks.push({ matchId: match.id, pickedItemId });
+    }
+  }
+
+  return submitPicks(token, { tournamentCode: code, picks });
 }

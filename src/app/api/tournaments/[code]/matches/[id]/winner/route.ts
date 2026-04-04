@@ -59,6 +59,17 @@ export async function POST(
   const roundNumber = match.round.roundNumber;
   const tournamentId = match.tournament.id;
 
+  // All participants must have submitted picks before any match can be resolved
+  const pendingCount = await prisma.participant.count({
+    where: { tournamentId, hasSubmittedPicks: false },
+  });
+  if (pendingCount > 0) {
+    return Response.json(
+      { error: "All participants must submit their picks before matches can be resolved" },
+      { status: 409 }
+    );
+  }
+
   await prisma.$transaction(async (tx) => {
     // Mark match complete
     await tx.match.update({

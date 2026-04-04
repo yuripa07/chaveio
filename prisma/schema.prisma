@@ -41,6 +41,7 @@ model Participant {
   passwordHash      String
   isCreator         Boolean @default(false)
   hasSubmittedPicks Boolean @default(false)
+  joinedAtRound     Int?
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   picks      Pick[]

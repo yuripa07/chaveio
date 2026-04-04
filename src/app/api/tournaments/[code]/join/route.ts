@@ -25,7 +25,12 @@ export async function POST(
     return Response.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const tournament = await prisma.tournament.findUnique({ where: { code } });
+  const tournament = await prisma.tournament.findUnique({
+    where: { code },
+    include: {
+      rounds: { where: { status: "ACTIVE" }, orderBy: { roundNumber: "asc" } },
+    },
+  });
   if (!tournament) {
     return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
@@ -47,8 +52,28 @@ export async function POST(
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+
+  // Determine joinedAtRound for late joiners
+  let joinedAtRound: number | null = null;
+  let hasSubmittedPicks = false;
+
+  if (tournament.status === "ACTIVE") {
+    const activeRound = tournament.rounds[0];
+    joinedAtRound = activeRound?.roundNumber ?? null;
+    hasSubmittedPicks = false;
+  } else if (tournament.status === "FINISHED") {
+    // Joining a finished tournament: no picks needed
+    hasSubmittedPicks = true;
+  }
+
   const participant = await prisma.participant.create({
-    data: { tournamentId: tournament.id, displayName, passwordHash },
+    data: {
+      tournamentId: tournament.id,
+      displayName,
+      passwordHash,
+      joinedAtRound,
+      hasSubmittedPicks,
+    },
   });
 
   const token = await signToken({

@@ -1,8 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireCreator, AuthError } from "@/lib/auth";
-import { generateFirstRoundPairs } from "@/lib/bracket";
-import { computeRoundPoints } from "@/lib/points";
 
 export async function POST(
   req: NextRequest,
@@ -22,7 +20,10 @@ export async function POST(
 
   const tournament = await prisma.tournament.findUnique({
     where: { code },
-    include: { items: { orderBy: { seed: "asc" } } },
+    include: {
+      participants: true,
+      rounds: { orderBy: { roundNumber: "asc" } },
+    },
   });
 
   if (!tournament || tournament.id !== payload.tournamentId) {
@@ -33,70 +34,29 @@ export async function POST(
     return Response.json({ error: "Tournament already started" }, { status: 409 });
   }
 
-  const items = tournament.items;
-  const n = items.length;
-  const totalRounds = Math.log2(n);
-  const pairs = generateFirstRoundPairs(n);
+  // All participants must have submitted full bracket picks
+  const pending = tournament.participants.filter((p) => !p.hasSubmittedPicks);
+  if (pending.length > 0) {
+    return Response.json(
+      {
+        error: "All participants must submit their bracket picks before starting",
+        pendingParticipants: pending.map((p) => p.displayName),
+      },
+      { status: 409 }
+    );
+  }
 
-  let roundNames: string[] = [];
-  try {
-    roundNames = JSON.parse(tournament.roundNames || "[]");
-  } catch { /* ignore */ }
+  // Bracket was already created at tournament creation — just activate round 1
+  const round1 = tournament.rounds.find((r) => r.roundNumber === 1);
+  if (!round1) {
+    return Response.json({ error: "Bracket not found" }, { status: 500 });
+  }
 
   await prisma.$transaction(async (tx) => {
-    // Create all rounds
-    const rounds = await Promise.all(
-      Array.from({ length: totalRounds }, (_, i) => {
-        const roundNumber = i + 1;
-        return tx.round.create({
-          data: {
-            tournamentId: tournament.id,
-            roundNumber,
-            name: roundNames[i] ?? null,
-            status: roundNumber === 1 ? "ACTIVE" : "PENDING",
-            pointValue: computeRoundPoints(roundNumber, totalRounds, n),
-          },
-        });
-      })
-    );
-
-    // Create round 1 matches with slots
-    await Promise.all(
-      pairs.map(([seed1, seed2], i) => {
-        const item1 = items.find((it) => it.seed === seed1)!;
-        const item2 = items.find((it) => it.seed === seed2)!;
-        return tx.match.create({
-          data: {
-            tournamentId: tournament.id,
-            roundId: rounds[0].id,
-            matchNumber: i + 1,
-            slots: {
-              create: [
-                { itemId: item1.id, position: 1 },
-                { itemId: item2.id, position: 2 },
-              ],
-            },
-          },
-        });
-      })
-    );
-
-    // Create empty matches for future rounds
-    for (let r = 1; r < totalRounds; r++) {
-      const matchCount = n / Math.pow(2, r + 1);
-      await Promise.all(
-        Array.from({ length: matchCount }, (_, i) =>
-          tx.match.create({
-            data: {
-              tournamentId: tournament.id,
-              roundId: rounds[r].id,
-              matchNumber: i + 1,
-            },
-          })
-        )
-      );
-    }
-
+    await tx.round.update({
+      where: { id: round1.id },
+      data: { status: "ACTIVE" },
+    });
     await tx.tournament.update({
       where: { id: tournament.id },
       data: { status: "ACTIVE", startedAt: new Date() },

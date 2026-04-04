@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { seedPositions, generateFirstRoundPairs, getNextRoundSlot } from "@/lib/bracket";
+import { seedPositions, generateFirstRoundPairs, getNextRoundSlot, getFeederMatches } from "@/lib/bracket";
 
 describe("seedPositions", () => {
   it("n=2 → [1, 2]", () => {
@@ -61,5 +61,30 @@ describe("getNextRoundSlot", () => {
 
   it("match 4 → {matchIndex: 1, slotPosition: 2}", () => {
     expect(getNextRoundSlot(4)).toEqual({ matchIndex: 1, slotPosition: 2 });
+  });
+});
+
+describe("getFeederMatches", () => {
+  it("match 1 in next round is fed by matches 1 and 2", () => {
+    expect(getFeederMatches(1)).toEqual([1, 2]);
+  });
+
+  it("match 2 in next round is fed by matches 3 and 4", () => {
+    expect(getFeederMatches(2)).toEqual([3, 4]);
+  });
+
+  it("match 3 in next round is fed by matches 5 and 6", () => {
+    expect(getFeederMatches(3)).toEqual([5, 6]);
+  });
+
+  it("is the inverse of getNextRoundSlot", () => {
+    // getNextRoundSlot(1) → matchIndex 0 → match 1 in next round
+    // getNextRoundSlot(2) → matchIndex 0 → match 1 in next round
+    // So getFeederMatches(1) should return [1, 2]
+    const [f1, f2] = getFeederMatches(1);
+    expect(getNextRoundSlot(f1).matchIndex).toBe(0);
+    expect(getNextRoundSlot(f2).matchIndex).toBe(0);
+    expect(getNextRoundSlot(f1).slotPosition).toBe(1);
+    expect(getNextRoundSlot(f2).slotPosition).toBe(2);
   });
 });

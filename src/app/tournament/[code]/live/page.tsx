@@ -11,10 +11,13 @@ type Slot = { id: string; itemId: string; position: number };
 type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
 type Round = { id: string; roundNumber: number; name?: string | null; status: string; pointValue: number; matches: Match[] };
 
+type Participant = { id: string; displayName: string; hasSubmittedPicks: boolean };
+
 type TournamentState = {
   tournament: { id: string; code: string; name: string; status: string };
   items: Item[];
   rounds: Round[];
+  participants: Participant[];
 };
 
 export default function LivePage({ params }: { params: Promise<{ code: string }> }) {
@@ -24,6 +27,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<TournamentState | null>(null);
   const [resolving, setResolving] = useState<string | null>(null);
+  const [winnerError, setWinnerError] = useState("");
 
   const loadState = useCallback(async (tok: string) => {
     const res = await fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${tok}` } });
@@ -46,13 +50,18 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   async function setWinner(matchId: string, winnerId: string) {
     if (!token) return;
     setResolving(matchId);
+    setWinnerError("");
     try {
       const res = await fetch(`/api/tournaments/${code}/matches/${matchId}/winner`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ winnerId }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setWinnerError(body.error ?? "Erro ao salvar vencedor");
+        return;
+      }
       const s = await loadState(token);
       if (!s) return;
       if (s.tournament.status === "FINISHED") { router.replace(`/tournament/${code}/results`); return; }
@@ -73,6 +82,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   const itemMap = Object.fromEntries(state.items.map((it) => [it.id, it]));
   const activeRound = state.rounds.find((r) => r.status === "ACTIVE");
   const pendingInRound = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
+  const pendingPicks = state.participants.filter((p) => !p.hasSubmittedPicks);
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
@@ -93,6 +103,26 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       </div>
 
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-8 px-6 py-8">
+
+        {/* Warning: pending picks */}
+        {pendingPicks.length > 0 && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3.5 text-sm text-amber-700">
+            <svg viewBox="0 0 16 16" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0">
+              <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1Zm0 3.5a.75.75 0 0 0-.75.75v3a.75.75 0 0 0 1.5 0v-3A.75.75 0 0 0 8 4.5Zm0 6a.875.875 0 1 0 0-1.75.875.875 0 0 0 0 1.75Z" />
+            </svg>
+            <span>
+              Aguardando palpites de: <strong>{pendingPicks.map((p) => p.displayName).join(", ")}</strong>.
+              Não é possível resolver partidas até que todos enviem seus palpites.
+            </span>
+          </div>
+        )}
+
+        {/* Error from winner API */}
+        {winnerError && (
+          <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-3 text-sm text-red-600">
+            {winnerError}
+          </div>
+        )}
 
         {/* Active round: big match cards */}
         {activeRound && pendingInRound.length > 0 && (

@@ -23,7 +23,8 @@ type Props = {
   itemMap: Record<string, Item>;
   picks?: Record<string, string>;
   onPick?: (matchId: string, itemId: string) => void;
-  mode?: "pick" | "view";
+  mode?: "pick" | "predict" | "view";
+  readOnlyRounds?: Set<number>; // round numbers that are view-only even in predict mode
 };
 
 const BASE_H = 100;
@@ -31,7 +32,7 @@ const ITEM_H = 42;
 const GAP = 6;
 const COL_W = 168;
 
-export default function BracketView({ rounds, itemMap, picks = {}, onPick, mode = "view" }: Props) {
+export default function BracketView({ rounds, itemMap, picks = {}, onPick, mode = "view", readOnlyRounds = new Set() }: Props) {
   if (!rounds.length) return null;
   const totalRounds = rounds.length;
 
@@ -69,7 +70,15 @@ export default function BracketView({ rounds, itemMap, picks = {}, onPick, mode 
                   const item2 = match.slots[1] ? itemMap[match.slots[1].itemId] : null;
                   const resolved = match.status === "COMPLETE";
                   const selected = picks[match.id];
-                  const pickable = mode === "pick" && round.status === "ACTIVE" && !resolved;
+                  const isReadOnly = readOnlyRounds.has(round.roundNumber);
+                  const pickable =
+                    !resolved &&
+                    !isReadOnly &&
+                    match.slots.length >= 2 &&
+                    (
+                      (mode === "pick" && round.status === "ACTIVE") ||
+                      mode === "predict"
+                    );
 
                   return (
                     <div

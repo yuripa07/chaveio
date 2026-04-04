@@ -1,4 +1,7 @@
 import { defineConfig } from "vitest/config";
+import { config } from "dotenv";
+
+config(); // load .env for DATABASE_URL
 
 export default defineConfig({
   resolve: {

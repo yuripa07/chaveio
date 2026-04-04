@@ -28,6 +28,7 @@ export async function GET(
           displayName: true,
           isCreator: true,
           hasSubmittedPicks: true,
+          joinedAtRound: true,
         },
       },
       rounds: {

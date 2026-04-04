@@ -1,149 +1,175 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { testPrisma, resetDb } from "./helpers";
-import { createTournament, joinTournament, submitPicks, getPicks } from "./fixtures";
-import { generateFirstRoundPairs } from "@/lib/bracket";
+import { createTournament, joinTournament, submitPicks, getPicks, submitFullBracketPicks } from "./fixtures";
 
 afterAll(async () => {
   await testPrisma.$disconnect();
 });
 
-async function setupTournamentWithBracket() {
-  const createRes = await createTournament();
-  const { code, token: creatorToken } = await createRes.json();
-
-  const tournament = await testPrisma.tournament.findUnique({
-    where: { code },
-    include: { items: { orderBy: { seed: "asc" } } },
-  });
-
-  const items = tournament!.items;
-  const pairs = generateFirstRoundPairs(items.length);
-
-  // Create round 1
-  const round = await testPrisma.round.create({
-    data: {
-      tournamentId: tournament!.id,
-      roundNumber: 1,
-      status: "ACTIVE",
-      pointValue: 1,
-    },
-  });
-
-  // Create matches + slots
-  const matches = await Promise.all(
-    pairs.map(async ([seed1, seed2], i) => {
-      const item1 = items.find((it) => it.seed === seed1)!;
-      const item2 = items.find((it) => it.seed === seed2)!;
-      const match = await testPrisma.match.create({
-        data: {
-          tournamentId: tournament!.id,
-          roundId: round.id,
-          matchNumber: i + 1,
-          slots: {
-            create: [
-              { itemId: item1.id, position: 1 },
-              { itemId: item2.id, position: 2 },
-            ],
-          },
-        },
-        include: { slots: true },
-      });
-      return match;
-    })
-  );
-
-  return { code, creatorToken, tournament: tournament!, items, matches };
-}
-
 beforeEach(async () => {
   await resetDb();
 });
 
-describe("POST /api/picks", () => {
-  it("submits picks and marks hasSubmittedPicks=true", async () => {
-    const { code, matches } = await setupTournamentWithBracket();
-    const { token } = await joinTournament(code, {
+// Helper: get the bracket created at tournament creation
+async function getBracket(code: string) {
+  return testPrisma.tournament.findUniqueOrThrow({
+    where: { code },
+    include: {
+      rounds: {
+        orderBy: { roundNumber: "asc" },
+        include: { matches: { orderBy: { matchNumber: "asc" }, include: { slots: true } } },
+      },
+    },
+  });
+}
+
+describe("POST /api/picks — full bracket submission", () => {
+  it("accepts a valid full bracket and marks hasSubmittedPicks=true", async () => {
+    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
+    const { token: bobToken } = await joinTournament(code, {
       displayName: "Bob",
       password: "pass",
     }).then((r) => r.json());
 
-    const picks = matches.map((m) => ({
-      matchId: m.id,
-      pickedItemId: m.slots[0].itemId,
-    }));
-
-    const res = await submitPicks(token, { tournamentCode: code, picks });
+    const res = await submitFullBracketPicks(bobToken, code);
     expect(res.status).toBe(200);
 
     const participant = await testPrisma.participant.findFirst({
       where: { displayName: "Bob" },
     });
     expect(participant!.hasSubmittedPicks).toBe(true);
+
+    void creatorToken;
   });
 
-  it("resubmitting picks is idempotent", async () => {
-    const { code, matches } = await setupTournamentWithBracket();
+  it("rejects submission missing picks for some matches", async () => {
+    const { code } = await createTournament().then((r) => r.json());
     const { token } = await joinTournament(code, {
       displayName: "Bob",
       password: "pass",
     }).then((r) => r.json());
 
-    const picks = matches.map((m) => ({
+    const t = await getBracket(code);
+    // Submit only round-1 picks (missing final)
+    const r1Picks = t.rounds[0].matches.map((m) => ({
       matchId: m.id,
       pickedItemId: m.slots[0].itemId,
     }));
 
-    await submitPicks(token, { tournamentCode: code, picks });
+    const res = await submitPicks(token, { tournamentCode: code, picks: r1Picks });
+    expect(res.status).toBe(400);
+  });
 
-    // Resubmit with different picks
-    const newPicks = matches.map((m) => ({
-      matchId: m.id,
-      pickedItemId: m.slots[1].itemId,
-    }));
-    const res = await submitPicks(token, { tournamentCode: code, picks: newPicks });
+  it("rejects pick with item not in round-1 match slots", async () => {
+    const { code } = await createTournament().then((r) => r.json());
+    const { token } = await joinTournament(code, {
+      displayName: "Bob",
+      password: "pass",
+    }).then((r) => r.json());
+
+    const t = await getBracket(code);
+    const r1 = t.rounds[0];
+    const r2 = t.rounds[1];
+
+    const picks = [
+      { matchId: r1.matches[0].id, pickedItemId: "nonexistent-id" }, // invalid
+      { matchId: r1.matches[1].id, pickedItemId: r1.matches[1].slots[0].itemId },
+      { matchId: r2.matches[0].id, pickedItemId: r1.matches[1].slots[0].itemId },
+    ];
+
+    const res = await submitPicks(token, { tournamentCode: code, picks });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects cascade violation in round 2", async () => {
+    const { code } = await createTournament().then((r) => r.json());
+    const { token } = await joinTournament(code, {
+      displayName: "Bob",
+      password: "pass",
+    }).then((r) => r.json());
+
+    const t = await getBracket(code);
+    const r1 = t.rounds[0];
+    const r2 = t.rounds[1];
+
+    const picks = [
+      { matchId: r1.matches[0].id, pickedItemId: r1.matches[0].slots[0].itemId }, // picks slot[0]
+      { matchId: r1.matches[1].id, pickedItemId: r1.matches[1].slots[0].itemId }, // picks slot[0]
+      // Final pick uses slot[1] item from match[0] — that item was NOT picked as winner
+      { matchId: r2.matches[0].id, pickedItemId: r1.matches[0].slots[1].itemId },
+    ];
+
+    const res = await submitPicks(token, { tournamentCode: code, picks });
+    expect(res.status).toBe(400);
+  });
+
+  it("resubmission in LOBBY overwrites picks", async () => {
+    const { code } = await createTournament().then((r) => r.json());
+    const { token } = await joinTournament(code, {
+      displayName: "Bob",
+      password: "pass",
+    }).then((r) => r.json());
+
+    const t = await getBracket(code);
+    const r1 = t.rounds[0];
+    const r2 = t.rounds[1];
+
+    // First submission: pick slot[0] everywhere
+    const firstPicks = [
+      { matchId: r1.matches[0].id, pickedItemId: r1.matches[0].slots[0].itemId },
+      { matchId: r1.matches[1].id, pickedItemId: r1.matches[1].slots[0].itemId },
+      { matchId: r2.matches[0].id, pickedItemId: r1.matches[0].slots[0].itemId },
+    ];
+    await submitPicks(token, { tournamentCode: code, picks: firstPicks });
+
+    // Second submission: switch final pick (but still valid cascade)
+    const secondPicks = [
+      { matchId: r1.matches[0].id, pickedItemId: r1.matches[0].slots[0].itemId },
+      { matchId: r1.matches[1].id, pickedItemId: r1.matches[1].slots[0].itemId },
+      { matchId: r2.matches[0].id, pickedItemId: r1.matches[1].slots[0].itemId }, // switched
+    ];
+    const res = await submitPicks(token, { tournamentCode: code, picks: secondPicks });
     expect(res.status).toBe(200);
 
     const dbPicks = await testPrisma.pick.findMany({
-      where: { match: { tournamentId: matches[0].tournamentId } },
+      where: { match: { roundId: r2.matches[0].roundId } },
     });
-    // Each pick should be updated to the new choice
-    for (const dp of dbPicks) {
-      const expected = newPicks.find((p) => p.matchId === dp.matchId);
-      expect(dp.pickedItemId).toBe(expected!.pickedItemId);
-    }
+    expect(dbPicks[0].pickedItemId).toBe(r1.matches[1].slots[0].itemId);
+  });
+
+  it("creator can also submit picks", async () => {
+    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
+    const res = await submitFullBracketPicks(creatorToken, code);
+    expect(res.status).toBe(200);
+
+    const creator = await testPrisma.participant.findFirst({ where: { isCreator: true } });
+    expect(creator!.hasSubmittedPicks).toBe(true);
   });
 });
 
 describe("GET /api/picks", () => {
   it("returns only the requester's picks", async () => {
-    const { code, matches } = await setupTournamentWithBracket();
+    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
     const { token: bobToken } = await joinTournament(code, {
       displayName: "Bob",
       password: "pass",
     }).then((r) => r.json());
     const { token: aliceToken } = await joinTournament(code, {
-      displayName: "Alice",
+      displayName: "Alice2",
       password: "pass",
     }).then((r) => r.json());
 
-    const bobPicks = matches.map((m) => ({
-      matchId: m.id,
-      pickedItemId: m.slots[0].itemId,
-    }));
-    const alicePicks = matches.map((m) => ({
-      matchId: m.id,
-      pickedItemId: m.slots[1].itemId,
-    }));
-    await submitPicks(bobToken, { tournamentCode: code, picks: bobPicks });
-    await submitPicks(aliceToken, { tournamentCode: code, picks: alicePicks });
+    await submitFullBracketPicks(bobToken, code);
+    await submitFullBracketPicks(aliceToken, code);
+
+    const t = await getBracket(code);
+    const totalMatches = t.rounds.reduce((sum, r) => sum + r.matches.length, 0);
 
     const res = await getPicks(bobToken, code);
     expect(res.status).toBe(200);
     const { picks } = await res.json();
-    expect(picks).toHaveLength(matches.length);
-    for (const p of picks) {
-      const expected = bobPicks.find((bp) => bp.matchId === p.matchId);
-      expect(p.pickedItemId).toBe(expected!.pickedItemId);
-    }
+    expect(picks).toHaveLength(totalMatches);
+
+    void creatorToken;
   });
 });

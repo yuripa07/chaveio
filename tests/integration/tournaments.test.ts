@@ -72,6 +72,41 @@ describe("POST /api/tournaments", () => {
     expect(tournament!.participants[0].isCreator).toBe(true);
     expect(tournament!.status).toBe("LOBBY");
   });
+
+  it("generates bracket (rounds + matches + slots) at creation for 4 items", async () => {
+    const { code } = await createTournament({
+      items: ["Brazil", "Japan", "Germany", "France"],
+    }).then((r) => r.json());
+
+    const t = await testPrisma.tournament.findUnique({
+      where: { code },
+      include: {
+        rounds: {
+          orderBy: { roundNumber: "asc" },
+          include: { matches: { include: { slots: true } } },
+        },
+      },
+    });
+
+    expect(t!.rounds).toHaveLength(2);
+    // Round 1: PENDING (not yet started), 2 matches with slots
+    expect(t!.rounds[0].status).toBe("PENDING");
+    expect(t!.rounds[0].matches).toHaveLength(2);
+    expect(t!.rounds[0].matches[0].slots).toHaveLength(2);
+    expect(t!.rounds[0].matches[1].slots).toHaveLength(2);
+    // Round 2: PENDING, 1 match, no slots yet
+    expect(t!.rounds[1].status).toBe("PENDING");
+    expect(t!.rounds[1].matches).toHaveLength(1);
+    expect(t!.rounds[1].matches[0].slots).toHaveLength(0);
+  });
+
+  it("GET tournament in LOBBY returns bracket with rounds and matches", async () => {
+    const { code, token } = await createTournament().then((r) => r.json());
+    const res = await getTournament(code, token);
+    const body = await res.json();
+    expect(body.rounds).toHaveLength(2);
+    expect(body.rounds[0].matches).toHaveLength(2);
+  });
 });
 
 describe("POST /api/tournaments/[code]/join", () => {

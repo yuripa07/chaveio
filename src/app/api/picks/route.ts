@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireParticipant, AuthError } from "@/lib/auth";
+import { validateBracketPicks } from "@/lib/picks-validation";
 
 export async function POST(req: NextRequest) {
   let payload;
@@ -27,6 +28,17 @@ export async function POST(req: NextRequest) {
 
   const tournament = await prisma.tournament.findUnique({
     where: { code: tournamentCode },
+    include: {
+      rounds: {
+        orderBy: { roundNumber: "asc" },
+        include: {
+          matches: {
+            orderBy: { matchNumber: "asc" },
+            include: { slots: true },
+          },
+        },
+      },
+    },
   });
 
   if (!tournament || tournament.id !== payload.tournamentId) {
@@ -34,10 +46,35 @@ export async function POST(req: NextRequest) {
   }
 
   if (tournament.status === "FINISHED") {
+    return Response.json({ error: "Tournament is already finished" }, { status: 409 });
+  }
+
+  const participant = await prisma.participant.findUniqueOrThrow({
+    where: { id: payload.participantId },
+  });
+
+  // Block updates to already-scored picks
+  const completedMatchIds = tournament.rounds
+    .flatMap((r) => r.matches)
+    .filter((m) => m.status === "COMPLETE")
+    .map((m) => m.id);
+
+  const attemptedOnComplete = picks.filter((p) => completedMatchIds.includes(p.matchId));
+  if (attemptedOnComplete.length > 0) {
     return Response.json(
-      { error: "Tournament is already finished" },
+      { error: "Cannot change picks for already-resolved matches" },
       { status: 409 }
     );
+  }
+
+  const validation = validateBracketPicks({
+    picks,
+    rounds: tournament.rounds,
+    joinedAtRound: participant.joinedAtRound,
+  });
+
+  if (!validation.valid) {
+    return Response.json({ error: validation.error }, { status: 400 });
   }
 
   await prisma.$transaction(async (tx) => {

@@ -253,25 +253,45 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           </div>
 
           {/* CTA */}
-          {isCreator && tournament.status === "LOBBY" && (
-            <button
-              onClick={handleStart}
-              disabled={starting}
-              className={btnPrimary}
-            >
-              {starting ? "Iniciando…" : "Iniciar torneio"}
-            </button>
-          )}
-
-          {!isCreator && tournament.status === "LOBBY" && (
-            <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-zinc-100 bg-white py-4 text-sm text-zinc-500 shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-              </span>
-              Aguardando o criador iniciar…
-            </div>
-          )}
+          {tournament.status === "LOBBY" && (() => {
+            const allReady = participants.every((p) => p.hasSubmittedPicks);
+            const notReady = participants.filter((p) => !p.hasSubmittedPicks);
+            return (
+              <div className="space-y-3">
+                <Link
+                  href={`/tournament/${code}/bracket`}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition-all"
+                >
+                  Fazer palpites →
+                </Link>
+                {isCreator && (
+                  <>
+                    {!allReady && (
+                      <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        Aguardando palpites de: {notReady.map((p) => p.displayName).join(", ")}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleStart}
+                      disabled={starting || !allReady}
+                      className={btnPrimary}
+                    >
+                      {starting ? "Iniciando…" : "Iniciar torneio"}
+                    </button>
+                  </>
+                )}
+                {!isCreator && (
+                  <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-zinc-100 bg-white py-4 text-sm text-zinc-500 shadow-sm">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                    </span>
+                    Aguardando o criador iniciar…
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </main>
