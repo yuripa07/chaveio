@@ -38,14 +38,18 @@ describe("computeMaxPoints", () => {
     expect(computeMaxPoints(4)).toBe(6);
   });
 
-  it("8 items = 20 pts", () => {
-    // 4×1 + 2×2 + 1×8 = 4 + 4 + 8 = 16... wait
-    // rounds: 1→1pt×4matches, 2→2pt×2matches, 3(final)→8pt×1match = 4+4+8 = 16? No...
-    // 3 rounds for 8 items: 2^(3-1)=4? No, final=itemCount=8
-    // r1: 2^0=1 × 4 matches = 4
-    // r2: 2^1=2 × 2 matches = 4
-    // r3(final): 8 × 1 match = 8
-    // total = 16
+  it("8 items = 16 pts", () => {
+    // r1: 1pt × 4 = 4; r2: 2pt × 2 = 4; r3(final): 8pt × 1 = 8 → total = 16
     expect(computeMaxPoints(8)).toBe(16);
+  });
+
+  it("32 items = 96 pts", () => {
+    // r1: 1pt × 16 = 16
+    // r2: 2pt × 8  = 16
+    // r3: 4pt × 4  = 16
+    // r4: 8pt × 2  = 16
+    // r5(final): 32pt × 1 = 32
+    // total = 96
+    expect(computeMaxPoints(32)).toBe(96);
   });
 });
