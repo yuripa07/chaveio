@@ -8,11 +8,12 @@ datasource db {
 }
 
 model Tournament {
-  id         String    @id @default(cuid())
-  code       String    @unique
-  name       String
-  roundNames String    @default("[]") // JSON array of round names
-  status     String    @default("LOBBY")
+  id           String    @id @default(cuid())
+  code         String    @unique
+  name         String
+  passwordHash String
+  roundNames   String    @default("[]")
+  status       String    @default("LOBBY")
   createdAt  DateTime  @default(now())
   startedAt  DateTime?
   endedAt    DateTime?
@@ -38,7 +39,6 @@ model Participant {
   id                String  @id @default(cuid())
   tournamentId      String
   displayName       String
-  passwordHash      String
   isCreator         Boolean @default(false)
   hasSubmittedPicks Boolean @default(false)
   joinedAtRound     Int?

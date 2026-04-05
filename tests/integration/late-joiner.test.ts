@@ -35,7 +35,7 @@ async function startedTournament() {
   const { code, token: creatorToken } = await createTournament().then((r) => r.json());
   const { token: bobToken } = await joinTournament(code, {
     displayName: "Bob",
-    password: "pass",
+    password: "pass123",
   }).then((r) => r.json());
   await submitFullBracketPicks(creatorToken, code);
   await submitFullBracketPicks(bobToken, code);
@@ -48,7 +48,7 @@ describe("Winner API — gate on all picks submitted", () => {
     const { code, creatorToken } = await startedTournament();
 
     // Eve joins after start — hasSubmittedPicks = false
-    await joinTournament(code, { displayName: "Eve", password: "pass" });
+    await joinTournament(code, { displayName: "Eve", password: "pass123" });
 
     const t = await getTournamentFromDb(code);
     const match = t.rounds[0].matches[0];
@@ -63,7 +63,7 @@ describe("Winner API — gate on all picks submitted", () => {
 
     const { token: eveToken } = await joinTournament(code, {
       displayName: "Eve",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     // Eve submits her remaining picks
@@ -80,7 +80,7 @@ describe("Late joiner", () => {
   it("gets joinedAtRound set to the current active round", async () => {
     const { code } = await startedTournament();
 
-    await joinTournament(code, { displayName: "Eve", password: "pass" });
+    await joinTournament(code, { displayName: "Eve", password: "pass123" });
 
     const eve = await testPrisma.participant.findFirst({ where: { displayName: "Eve" } });
     expect(eve!.joinedAtRound).toBe(1);
@@ -92,7 +92,7 @@ describe("Late joiner", () => {
 
     const { token: eveToken } = await joinTournament(code, {
       displayName: "Eve",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const res = await submitFullBracketPicks(eveToken, code);
@@ -114,7 +114,7 @@ describe("Late joiner", () => {
     // Eve joins now at round 2
     const { token: eveToken } = await joinTournament(code, {
       displayName: "Eve",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const eve = await testPrisma.participant.findFirst({ where: { displayName: "Eve" } });
@@ -146,7 +146,7 @@ describe("Late joiner", () => {
 
     const { token: eveToken } = await joinTournament(code, {
       displayName: "Eve",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     // Attempt to submit picks for round 1 (already completed) — should fail
@@ -164,7 +164,7 @@ describe("Late joiner", () => {
     // Eve joins — no picks submitted
     const { token: eveToken } = await joinTournament(code, {
       displayName: "Eve",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const t = await getTournamentFromDb(code);

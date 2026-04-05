@@ -22,7 +22,7 @@ async function setup() {
   const { code, token: creatorToken } = await createTournament().then((r) => r.json());
   const { token: bobToken } = await joinTournament(code, {
     displayName: "Bob",
-    password: "pass",
+    password: "pass123",
   }).then((r) => r.json());
   return { code, creatorToken, bobToken };
 }
