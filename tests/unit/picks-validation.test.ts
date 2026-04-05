@@ -146,6 +146,26 @@ describe("validateBracketPicks — 8-item full bracket", () => {
   });
 });
 
+describe("validateBracketPicks — structural errors", () => {
+  it("returns invalid when feeder matches are missing from the previous round", () => {
+    // Round 1 has no matches, so feeder lookup for round 2 match 1 fails
+    const rounds: Round[] = [
+      { roundNumber: 1, matches: [] },
+      {
+        roundNumber: 2,
+        matches: [{ id: "m1", matchNumber: 1, status: "PENDING", slots: [] }],
+      },
+    ];
+    const result = validateBracketPicks({
+      picks: [{ matchId: "m1", pickedItemId: "A" }],
+      rounds,
+      joinedAtRound: null,
+    });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toMatch(/feeder/i);
+  });
+});
+
 describe("validateBracketPicks — edge cases", () => {
   it("accepts extra picks for unrequired matches (ignored, not rejected)", () => {
     const result = validateBracketPicks({

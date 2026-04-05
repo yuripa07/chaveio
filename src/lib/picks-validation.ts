@@ -92,12 +92,6 @@ export function validateBracketPicks(params: {
       if (pick1) validPredecessors.add(pick1);
       if (pick2) validPredecessors.add(pick2);
 
-      // For late joiners: feeder matches from before joinedAtRound use actual slots
-      if (match.roundNumber - 1 < startRound) {
-        feeder1.slots.forEach((s) => validPredecessors.add(s.itemId));
-        feeder2.slots.forEach((s) => validPredecessors.add(s.itemId));
-      }
-
       if (!validPredecessors.has(pickedItemId)) {
         return {
           valid: false,
