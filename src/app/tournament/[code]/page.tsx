@@ -12,7 +12,7 @@ import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
 import { BackLink } from "@/components/back-link";
 import { ErrorAlert } from "@/components/error-alert";
 import { LobbyCTA } from "@/components/lobby-cta";
-import { PageSkeleton } from "@/components/page-spinner";
+import { LobbyPageSkeleton } from "@/components/page-spinner";
 import { Spinner } from "@/components/spinner";
 import type { Participant, TournamentState } from "@/types/tournament";
 
@@ -196,7 +196,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     );
   }
 
-  if (!tournamentData) return <PageSkeleton />;
+  if (!tournamentData) return <LobbyPageSkeleton />;
 
   const { tournament, participants, items } = tournamentData;
 

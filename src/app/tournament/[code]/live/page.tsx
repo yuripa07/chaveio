@@ -8,7 +8,7 @@ import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, RoundStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
-import { PageSpinner } from "@/components/page-spinner";
+import { LivePageSkeleton } from "@/components/page-spinner";
 import { InfoBanner } from "@/components/info-banner";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
@@ -97,7 +97,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     [state?.items]
   );
 
-  if (!state) return <PageSpinner />;
+  if (!state) return <LivePageSkeleton />;
 
   const activeRound = state.rounds.find((r) => r.status === RoundStatus.ACTIVE);
   const pendingMatches = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];

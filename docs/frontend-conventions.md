@@ -188,7 +188,7 @@ Reusable components live in `src/components/`. Always check if one exists before
 | Component | Usage |
 |-----------|-------|
 | `spinner.tsx` | Inline loading spinner (sm/md/lg) |
-| `page-spinner.tsx` | Full-page loading (PageSpinner + PageSkeleton) |
+| `page-spinner.tsx` | Full-page loading: `PageSpinner`, `PageSkeleton`, `LobbyPageSkeleton`, `BracketPageSkeleton`, `LivePageSkeleton`, `ResultsPageSkeleton` — use the page-specific skeleton when the page layout is known |
 | `error-alert.tsx` | Red error banner |
 | `info-banner.tsx` | Info/warning banner |
 | `tournament-header.tsx` | Sticky header with code/name/back |

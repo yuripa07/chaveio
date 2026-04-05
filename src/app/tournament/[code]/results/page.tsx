@@ -6,7 +6,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_RESULTS } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
-import { PageSpinner } from "@/components/page-spinner";
+import { ResultsPageSkeleton } from "@/components/page-spinner";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
 import { ScoreStat } from "@/components/score-stat";
@@ -74,7 +74,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     [myPicks]
   );
 
-  if (!state) return <PageSpinner />;
+  if (!state) return <ResultsPageSkeleton />;
 
   let myTotalPoints = 0;
   let resolvedCount = 0;
