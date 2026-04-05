@@ -127,3 +127,27 @@ export async function POST(
 ```
 
 Start the params promise early alongside auth/body if possible.
+
+---
+
+## 8. Auth Gate Testing (CRITICAL — learned from prod incident)
+
+Every authentication gate needs **two** tests:
+
+1. **Returning user with wrong credentials** — validates re-auth logic
+2. **First-time user with wrong credentials** — validates the gate itself
+
+Skipping the second test allows anyone to bypass the gate on their first request.
+
+```typescript
+// ✗ Bad — only tests re-auth, gate is open to new users
+await joinTournament(code, { displayName: "Bob", password: "correct" });
+const res = await joinTournament(code, { displayName: "Bob", password: "wrong" });
+expect(res.status).toBe(401);
+
+// ✓ Good — also tests that the gate is closed to new users
+it("rejects first-time join with wrong tournament password", async () => {
+  const res = await joinTournament(code, { displayName: "NewUser", password: "wrong" });
+  expect(res.status).toBe(401);
+});
+```
