@@ -61,6 +61,8 @@ pnpm prisma generate
 
 The GitHub Actions workflow (`.github/workflows/migrate-prod.yml`) applies pending migrations to the Neon **main** branch automatically on push to `main`. No manual step required.
 
+> **GitHub Environment secrets:** `PROD_DATABASE_URL` is stored under the "Production" environment (not as a repository secret). The workflow job must declare `environment: Production` — otherwise GitHub does not inject environment-scoped secrets.
+
 If you need to apply manually:
 ```bash
 DATABASE_URL="<prod-neon-url>" pnpm prisma migrate deploy
