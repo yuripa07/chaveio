@@ -6,7 +6,7 @@ import Link from "next/link";
 import { BarChart2, Clock, Swords, Trophy, AlertTriangle, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { cn } from "@/lib/cn";
-import { TournamentStatus } from "@/constants/tournament";
+import { TournamentStatus, RoundStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
 import { PageSpinner } from "@/components/page-spinner";
 import { InfoBanner } from "@/components/info-banner";
@@ -48,7 +48,6 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     return { state: (await tournamentRes.json()) as TournamentState, rankings: rankingsData };
   }, [code]);
 
-  // Initial load + redirect non-creators
   useEffect(() => {
     if (!token) { router.replace(`/tournament/${code}`); return; }
     if (!isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
@@ -100,7 +99,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   if (!state) return <PageSpinner />;
 
-  const activeRound = state.rounds.find((r) => r.status === TournamentStatus.ACTIVE);
+  const activeRound = state.rounds.find((r) => r.status === RoundStatus.ACTIVE);
   const pendingMatches = activeRound?.matches.filter((m) => m.status !== "COMPLETE") ?? [];
   const pendingParticipants = state.participants.filter((p) => !p.hasSubmittedPicks);
 
@@ -122,7 +121,6 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         }
       />
 
-      {/* Confirmation dialog */}
       {pendingWinner && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"

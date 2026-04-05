@@ -59,7 +59,6 @@ export default function Home() {
       <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 to-white px-6 py-24">
         <div className="w-full max-w-sm space-y-10 text-center">
 
-          {/* Brand */}
           <div className="flex flex-col items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200">
               <Trophy className="h-8 w-8 text-white" />
@@ -70,7 +69,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="space-y-3">
             <Link
               href="/tournament/new"
@@ -112,7 +110,6 @@ export default function Home() {
                         : "border-zinc-200 focus:border-transparent focus:ring-indigo-500 text-zinc-900"
                     )}
                   />
-                  {/* Progress bar */}
                   {code.length > 0 && !codeComplete && !codeError && (
                     <div className="absolute bottom-0 left-4 right-4 h-0.5 overflow-hidden rounded-full bg-zinc-100">
                       <div

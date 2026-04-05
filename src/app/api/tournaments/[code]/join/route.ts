@@ -63,7 +63,6 @@ export async function POST(
 
   // Determine joinedAtRound for late joiners
   let joinedAtRound: number | null = null;
-  const hasSubmittedPicks = false;
 
   if (tournament.status === "ACTIVE") {
     const activeRound = tournament.rounds[0];
@@ -76,7 +75,7 @@ export async function POST(
       displayName,
       passwordHash,
       joinedAtRound,
-      hasSubmittedPicks,
+      hasSubmittedPicks: false,
     },
   });
 

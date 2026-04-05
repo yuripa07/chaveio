@@ -47,7 +47,6 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     [code]
   );
 
-  // Initial load — redirect if no token
   useEffect(() => {
     if (!token) { router.replace(`/tournament/${code}`); return; }
     loadState(token).then((newState) => {
@@ -61,7 +60,6 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     });
   }, [token, code, loadState, router]);
 
-  // Poll while active
   usePolling(
     async (signal) => {
       if (!token) return;
@@ -108,7 +106,6 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     }
   }
 
-  // Derived state
   const me = state?.participants.find((p) => p.id === participantId);
   const joinedAtRound = me?.joinedAtRound ?? null;
   const startRound = joinedAtRound ?? 1;
@@ -131,7 +128,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   );
 
   const { pickedCount, eligibleCount } = useMemo(() => {
-    let picked = 0, eligible = 0;
+    let picked = 0;
+    let eligible = 0;
     for (const round of augmented) {
       if (round.roundNumber < startRound) continue;
       for (const match of round.matches) {

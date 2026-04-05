@@ -238,7 +238,7 @@ export default function NewTournament() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword((v) => !v)}
+                      onClick={() => setShowPassword((prev) => !prev)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
                       aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
