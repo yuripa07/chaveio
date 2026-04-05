@@ -35,14 +35,16 @@ export async function POST(
     return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
 
+  const passwordOk = await bcrypt.compare(password, tournament.passwordHash);
+  if (!passwordOk) {
+    return Response.json({ error: "Senha incorreta" }, { status: 401 });
+  }
+
   const existing = await prisma.participant.findUnique({
     where: { tournamentId_displayName: { tournamentId: tournament.id, displayName } },
   });
 
   if (existing) {
-    const ok = await bcrypt.compare(password, existing.passwordHash);
-    if (!ok) return Response.json({ error: "Invalid password" }, { status: 401 });
-
     const token = await signToken({
       participantId: existing.id,
       tournamentId: tournament.id,
@@ -51,7 +53,6 @@ export async function POST(
     return Response.json({ token }, { status: 200 });
   }
 
-  // Block new registrations for finished tournaments
   if (tournament.status === "FINISHED") {
     return Response.json(
       { error: "Este torneio já foi finalizado. Novos participantes não podem entrar." },
@@ -59,11 +60,7 @@ export async function POST(
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  // Determine joinedAtRound for late joiners
   let joinedAtRound: number | null = null;
-
   if (tournament.status === "ACTIVE") {
     const activeRound = tournament.rounds[0];
     joinedAtRound = activeRound?.roundNumber ?? null;
@@ -73,7 +70,6 @@ export async function POST(
     data: {
       tournamentId: tournament.id,
       displayName,
-      passwordHash,
       joinedAtRound,
       hasSubmittedPicks: false,
     },

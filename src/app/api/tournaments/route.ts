@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       data: {
         code,
         name,
+        passwordHash,
         roundNames: JSON.stringify(roundNames ?? []),
         items: {
           create: items.map((itemName, i) => ({ name: itemName, seed: i + 1 })),
@@ -80,7 +81,6 @@ export async function POST(req: NextRequest) {
       data: {
         tournamentId: newTournament.id,
         displayName: creatorName,
-        passwordHash,
         isCreator: true,
       },
     });
