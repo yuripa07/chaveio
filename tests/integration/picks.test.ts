@@ -35,7 +35,7 @@ describe("POST /api/picks — full bracket submission", () => {
     const { code, token: creatorToken } = await createTournament().then((r) => r.json());
     const { token: bobToken } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const res = await submitFullBracketPicks(bobToken, code);
@@ -53,7 +53,7 @@ describe("POST /api/picks — full bracket submission", () => {
     const { code } = await createTournament().then((r) => r.json());
     const { token } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const t = await getBracket(code);
@@ -70,7 +70,7 @@ describe("POST /api/picks — full bracket submission", () => {
     const { code } = await createTournament().then((r) => r.json());
     const { token } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const t = await getBracket(code);
@@ -91,7 +91,7 @@ describe("POST /api/picks — full bracket submission", () => {
     const { code } = await createTournament().then((r) => r.json());
     const { token } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const t = await getBracket(code);
@@ -112,7 +112,7 @@ describe("POST /api/picks — full bracket submission", () => {
     const { code } = await createTournament().then((r) => r.json());
     const { token } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const t = await getBracket(code);
@@ -194,11 +194,11 @@ describe("GET /api/picks", () => {
     const { code, token: creatorToken } = await createTournament().then((r) => r.json());
     const { token: bobToken } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
     const { token: aliceToken } = await joinTournament(code, {
       displayName: "Alice2",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     await submitFullBracketPicks(bobToken, code);

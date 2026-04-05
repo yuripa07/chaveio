@@ -175,11 +175,17 @@ describe("POST /api/tournaments", () => {
 });
 
 describe("POST /api/tournaments/[code]/join", () => {
+  it("rejects first-time join with wrong tournament password", async () => {
+    const { code } = await createTournament({ creatorPassword: "correct" }).then((r) => r.json());
+    const res = await joinTournament(code, { displayName: "NewUser", password: "wrong" });
+    expect(res.status).toBe(401);
+  });
+
   it("creates a new participant and returns a token", async () => {
     const { code } = await createTournament().then((r) => r.json());
     const res = await joinTournament(code, {
       displayName: "Bob",
-      password: "secret",
+      password: "pass123",
     });
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -188,10 +194,10 @@ describe("POST /api/tournaments/[code]/join", () => {
 
   it("re-issues token when same name + correct password", async () => {
     const { code } = await createTournament().then((r) => r.json());
-    await joinTournament(code, { displayName: "Bob", password: "secret" });
+    await joinTournament(code, { displayName: "Bob", password: "pass123" });
     const res = await joinTournament(code, {
       displayName: "Bob",
-      password: "secret",
+      password: "pass123",
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -200,7 +206,6 @@ describe("POST /api/tournaments/[code]/join", () => {
 
   it("returns 401 for wrong password", async () => {
     const { code } = await createTournament().then((r) => r.json());
-    await joinTournament(code, { displayName: "Bob", password: "secret" });
     const res = await joinTournament(code, {
       displayName: "Bob",
       password: "wrong",
@@ -211,7 +216,7 @@ describe("POST /api/tournaments/[code]/join", () => {
   it("returns 404 for unknown tournament code", async () => {
     const res = await joinTournament("XXXXXX", {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     });
     expect(res.status).toBe(404);
   });
@@ -254,7 +259,7 @@ describe("POST /api/tournaments/[code]/join", () => {
       }
     }
 
-    const res = await joinTournament(code, { displayName: "NewUser", password: "pass" });
+    const res = await joinTournament(code, { displayName: "NewUser", password: "pass123" });
     expect(res.status).toBe(403);
   });
 });
@@ -264,7 +269,7 @@ describe("GET /api/tournaments/[code]", () => {
     const { code, token } = await createTournament().then((r) => r.json());
     const { token: bobToken } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
 
     const res = await getTournament(code, bobToken);

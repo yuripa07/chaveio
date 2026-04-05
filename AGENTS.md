@@ -226,6 +226,12 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 - `tx`: Prisma transaction context
 - Route params: `params: Promise<{ code: string }>`
 
+### Code Style (see `docs/code-conventions.md`)
+- No unnecessary comments — names should explain the code; comments only for non-obvious *why*
+- Readable, semantic variable names — full domain names, no opaque abbreviations
+- Allowed short names: `tx` (Prisma transaction), `id`, `req`/`res` (route handlers), `e` (catch)
+- See `docs/git-workflow.md` for branch strategy, release versioning, and DB migration procedures
+
 ### Frontend Patterns (see `docs/frontend-conventions.md`)
 1. **Custom hooks** — `useTournamentToken()` for JWT management, `usePolling()` for interval+abort
 2. **Parallel fetches** — `Promise.all()` for independent API calls
@@ -248,6 +254,7 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 5. **Focused transactions** — only mutations inside `$transaction`, hashing/validation before
 6. **Promise.all inside transactions** — parallelize independent writes
 7. **Response shapes**: mutations `{ success: true }`, queries `{ data }`, errors `{ error: "msg" }`
+8. **Auth gate testing** — always test both re-auth AND first-time-wrong-password (see docs/backend-conventions.md §8)
 
 ### Architecture Decisions
 | Decision | Rationale |

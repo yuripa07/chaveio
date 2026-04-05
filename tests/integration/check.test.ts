@@ -40,7 +40,7 @@ describe("GET /api/tournaments/[code]/check", () => {
     const { code, token: creatorToken } = await createTournament().then((r) => r.json());
     const { token: bobToken } = await joinTournament(code, {
       displayName: "Bob",
-      password: "pass",
+      password: "pass123",
     }).then((r) => r.json());
     await submitFullBracketPicks(creatorToken, code);
     await submitFullBracketPicks(bobToken, code);
