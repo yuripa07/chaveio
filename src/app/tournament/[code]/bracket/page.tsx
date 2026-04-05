@@ -10,7 +10,7 @@ import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
 import BracketView from "@/components/bracket-view";
-import { PageSpinner } from "@/components/page-spinner";
+import { BracketPageSkeleton } from "@/components/page-spinner";
 import { TournamentHeader } from "@/components/tournament-header";
 import { Spinner } from "@/components/spinner";
 import type { TournamentState } from "@/types/tournament";
@@ -144,7 +144,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
   const allPicked = eligibleCount > 0 && pickedCount === eligibleCount;
 
-  if (!state) return <PageSpinner />;
+  if (!state) return <BracketPageSkeleton />;
 
   const mode = viewOnly ? "view" : "predict";
   const isLobby = state.tournament.status === TournamentStatus.LOBBY;
