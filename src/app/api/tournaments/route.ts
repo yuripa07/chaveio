@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const passwordHash = await hashPromise;
 
   const tournament = await prisma.$transaction(async (tx) => {
-    const t = await tx.tournament.create({
+    const newTournament = await tx.tournament.create({
       data: {
         code,
         name,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     const participant = await tx.participant.create({
       data: {
-        tournamentId: t.id,
+        tournamentId: newTournament.id,
         displayName: creatorName,
         passwordHash,
         isCreator: true,
@@ -86,18 +86,20 @@ export async function POST(req: NextRequest) {
     });
 
     // Generate bracket at creation so participants can predict before start
-    const n = t.items.length;
+    const n = newTournament.items.length;
     const numRounds = Math.log2(n);
     const pairs = generateFirstRoundPairs(n);
     let parsedRoundNames: string[] = [];
-    try { parsedRoundNames = JSON.parse(t.roundNames || "[]"); } catch { /* ignore */ }
+    try {
+      parsedRoundNames = JSON.parse(newTournament.roundNames || "[]");
+    } catch {}
 
     const rounds = await Promise.all(
       Array.from({ length: numRounds }, (_, i) => {
         const roundNumber = i + 1;
         return tx.round.create({
           data: {
-            tournamentId: t.id,
+            tournamentId: newTournament.id,
             roundNumber,
             name: parsedRoundNames[i] ?? null,
             status: "PENDING",
@@ -110,11 +112,11 @@ export async function POST(req: NextRequest) {
     // Round 1 matches with seeded slots
     await Promise.all(
       pairs.map(([seed1, seed2], i) => {
-        const item1 = t.items.find((it) => it.seed === seed1)!;
-        const item2 = t.items.find((it) => it.seed === seed2)!;
+        const item1 = newTournament.items.find((it) => it.seed === seed1)!;
+        const item2 = newTournament.items.find((it) => it.seed === seed2)!;
         return tx.match.create({
           data: {
-            tournamentId: t.id,
+            tournamentId: newTournament.id,
             roundId: rounds[0].id,
             matchNumber: i + 1,
             slots: {
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
         Array.from({ length: matchCount }, (_, i) =>
           tx.match.create({
             data: {
-              tournamentId: t.id,
+              tournamentId: newTournament.id,
               roundId: rounds[r].id,
               matchNumber: i + 1,
             },
@@ -144,12 +146,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return { t, participant };
+    return { newTournament, participant };
   });
 
   const token = await signToken({
     participantId: tournament.participant.id,
-    tournamentId: tournament.t.id,
+    tournamentId: tournament.newTournament.id,
     isCreator: true,
   });
 
