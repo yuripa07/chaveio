@@ -43,7 +43,6 @@ export default function BracketView({
 
           return (
             <div key={round.id} className="flex flex-col" style={{ width: BRACKET_COLUMN_WIDTH + 32 }}>
-              {/* Column header */}
               <div className="mb-2 px-4">
                 <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
                   {round.name || (isLastRound ? "Final" : `Rodada ${round.roundNumber}`)}
@@ -56,7 +55,6 @@ export default function BracketView({
                 </span>
               </div>
 
-              {/* Matches */}
               <div className="flex flex-col">
                 {round.matches.map((match) => {
                   const item1 = match.slots[0] ? itemMap[match.slots[0].itemId] : null;

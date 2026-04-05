@@ -6,7 +6,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_RESULTS } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
-import { PageSpinner } from "@/components/page-spinner";
+import { ResultsPageSkeleton } from "@/components/page-spinner";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
 import { ScoreStat } from "@/components/score-stat";
@@ -74,9 +74,11 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     [myPicks]
   );
 
-  if (!state) return <PageSpinner />;
+  if (!state) return <ResultsPageSkeleton />;
 
-  let myTotalPoints = 0, resolvedCount = 0, correctCount = 0;
+  let myTotalPoints = 0;
+  let resolvedCount = 0;
+  let correctCount = 0;
   for (const pick of myPicks) {
     myTotalPoints += pick.pointsEarned;
     if (pick.isCorrect !== null) resolvedCount++;
@@ -111,7 +113,6 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-8">
 
-        {/* Score card */}
         <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-6 py-6 text-white">
             <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Sua pontuação</p>
@@ -125,7 +126,6 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           </div>
         </div>
 
-        {/* Rankings */}
         {rankings.length > 1 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking</h2>
@@ -133,7 +133,6 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           </section>
         )}
 
-        {/* Picks breakdown */}
         {resolvedCount > 0 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Meus palpites</h2>
@@ -198,7 +197,6 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           </section>
         )}
 
-        {/* Bracket */}
         {state.rounds.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Chaveamento</h2>

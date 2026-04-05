@@ -54,9 +54,13 @@ src/
 │   │   ├── new/page.tsx                  # Create tournament form
 │   │   └── [code]/
 │   │       ├── page.tsx                  # Lobby / join screen
+│   │       ├── loading.tsx               # Lobby skeleton (Next.js route loading)
 │   │       ├── bracket/page.tsx          # Fill bracket (pre-start) / view bracket (active)
+│   │       ├── bracket/loading.tsx       # Bracket skeleton
 │   │       ├── live/page.tsx             # Creator resolves matches
-│   │       └── results/page.tsx          # Leaderboard + bracket view
+│   │       ├── live/loading.tsx          # Live skeleton
+│   │       ├── results/page.tsx          # Leaderboard + bracket view
+│   │       └── results/loading.tsx       # Results skeleton
 │   └── api/
 │       ├── tournaments/route.ts          # POST create
 │       └── tournaments/[code]/
@@ -90,7 +94,7 @@ src/
 │   ├── form-field.tsx        # Labeled input wrapper
 │   ├── info-banner.tsx       # Info/warning banner (type: info|warning)
 │   ├── lobby-cta.tsx         # Lobby call-to-action (submit/start/waiting)
-│   ├── page-spinner.tsx      # Full-page loading (PageSpinner + PageSkeleton)
+│   ├── page-spinner.tsx      # Full-page loading: PageSpinner, PageSkeleton, LobbyPageSkeleton, BracketPageSkeleton, LivePageSkeleton, ResultsPageSkeleton
 │   ├── pulse-dot.tsx         # Animated status dot
 │   ├── rankings-table.tsx    # Leaderboard table (highlights current user)
 │   ├── result-icon.tsx       # Correct/incorrect/pending SVG icons

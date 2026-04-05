@@ -12,7 +12,7 @@ import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
 import { BackLink } from "@/components/back-link";
 import { ErrorAlert } from "@/components/error-alert";
 import { LobbyCTA } from "@/components/lobby-cta";
-import { PageSkeleton } from "@/components/page-spinner";
+import { LobbyPageSkeleton } from "@/components/page-spinner";
 import { Spinner } from "@/components/spinner";
 import type { Participant, TournamentState } from "@/types/tournament";
 
@@ -113,7 +113,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     });
   }
 
-  /* ── Join screen (not yet authenticated) ── */
   if (!token) {
     return (
       <main className="flex min-h-screen flex-col bg-zinc-50">
@@ -163,7 +162,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((v) => !v)}
+                  onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
@@ -197,7 +196,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     );
   }
 
-  if (!tournamentData) return <PageSkeleton />;
+  if (!tournamentData) return <LobbyPageSkeleton />;
 
   const { tournament, participants, items } = tournamentData;
 
@@ -228,7 +227,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             </span>
           </div>
 
-          {/* Invite code banner */}
           <div className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-white px-5 py-3 shadow-sm">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
               <Hash className="h-4 w-4 text-indigo-500" />
@@ -252,7 +250,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {/* Participants */}
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
                 <User className="h-3.5 w-3.5" />
@@ -282,7 +279,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               </ul>
             </div>
 
-            {/* Items */}
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
                 <Trophy className="h-3.5 w-3.5" />

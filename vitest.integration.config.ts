@@ -16,5 +16,11 @@ export default defineConfig({
     env: {
       JWT_SECRET: "test-secret-for-vitest",
     },
+    coverage: {
+      provider: "v8",
+      include: ["src/app/api/**"],
+      reporter: ["text", "html"],
+      reportsDirectory: "coverage/integration",
+    },
   },
 });

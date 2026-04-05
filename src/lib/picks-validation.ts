@@ -27,12 +27,11 @@ export function validateBracketPicks(params: {
   const { picks, rounds, joinedAtRound } = params;
 
   const startRound = joinedAtRound ?? 1;
-  const pickMap = new Map<string, string>(); // matchId → pickedItemId
+  const pickMap = new Map<string, string>();
   for (const p of picks) {
     pickMap.set(p.matchId, p.pickedItemId);
   }
 
-  // Build lookup structures
   const matchById = new Map<string, Match & { roundNumber: number }>();
   const matchByRoundAndNumber = new Map<string, Match>();
 
@@ -43,12 +42,10 @@ export function validateBracketPicks(params: {
     }
   }
 
-  // Required matches: all matches from startRound onward
   const requiredMatches = rounds
     .filter((r) => r.roundNumber >= startRound)
     .flatMap((r) => r.matches.map((m) => ({ ...m, roundNumber: r.roundNumber })));
 
-  // Check coverage
   for (const match of requiredMatches) {
     if (!pickMap.has(match.id)) {
       return {
@@ -58,7 +55,6 @@ export function validateBracketPicks(params: {
     }
   }
 
-  // Validate each required pick
   for (const match of requiredMatches) {
     const pickedItemId = pickMap.get(match.id)!;
 
@@ -83,20 +79,12 @@ export function validateBracketPicks(params: {
         return { valid: false, error: `Could not find feeder matches for match ${match.id}` };
       }
 
-      // For start-round feeders: get the actual pick; for pre-start feeders: look up in pickMap
       const pick1 = pickMap.get(feeder1.id);
       const pick2 = pickMap.get(feeder2.id);
 
-      // Feeder picks may come from actual match slots (for rounds before the start round)
       const validPredecessors = new Set<string>();
       if (pick1) validPredecessors.add(pick1);
       if (pick2) validPredecessors.add(pick2);
-
-      // For late joiners: feeder matches from before joinedAtRound use actual slots
-      if (match.roundNumber - 1 < startRound) {
-        feeder1.slots.forEach((s) => validPredecessors.add(s.itemId));
-        feeder2.slots.forEach((s) => validPredecessors.add(s.itemId));
-      }
 
       if (!validPredecessors.has(pickedItemId)) {
         return {

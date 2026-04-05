@@ -53,7 +53,6 @@ export async function GET(
     }))
     .sort((a, b) => b.totalPoints - a.totalPoints);
 
-  // Dense ranking: ties share the same rank
   let rank = 1;
   for (let i = 0; i < sorted.length; i++) {
     if (i > 0 && sorted[i].totalPoints < sorted[i - 1].totalPoints) rank = i + 1;

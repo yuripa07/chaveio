@@ -5,7 +5,13 @@ export function createPrisma(url?: string) {
   const connectionString = url ?? process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is not set");
   const adapter = new PrismaPg({ connectionString });
-  return new PrismaClient({ adapter });
+  return new PrismaClient({
+    adapter,
+    transactionOptions: {
+      maxWait: 10000, // default 2000ms is too tight for remote Neon DB
+      timeout: 30000,
+    },
+  });
 }
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
