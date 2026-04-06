@@ -146,13 +146,15 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     }
   }, [tournamentData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleDragStart(event: DragStartEvent) {
+  const handleDragStart = useCallback(function(event: DragStartEvent) {
     setActiveItemId(event.active.id as string);
-  }
+  }, []);
 
-  async function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = useCallback(async function(event: DragEndEvent) {
     const { active, over } = event;
     setActiveItemId(null);
+
+    if (!token) return;
 
     if (!over || active.id === over.id) return;
 
@@ -169,7 +171,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token!}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ itemIds: newItems.map((i) => i.id) }),
       });
@@ -182,7 +184,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       setLocalItems(previousItems);
       setReorderError("Erro de rede ao reordenar");
     }
-  }
+  }, [localItems, code, token]);
 
   if (!token) {
     return (
@@ -407,7 +409,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 </ul>
               )}
 
-              {isCreator && hasAnyPicksSubmitted && (
+              {isCreator && hasAnyPicksSubmitted && tournament.status === TournamentStatus.LOBBY && (
                 <p className="mt-2 text-xs text-zinc-400">
                   Reordenação bloqueada — um ou mais participantes já enviaram palpites.
                 </p>
