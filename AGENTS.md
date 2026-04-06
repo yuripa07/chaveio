@@ -69,6 +69,8 @@ src/
 │           ├── join/route.ts             # POST join
 │           ├── start/route.ts            # POST start (creator)
 │           ├── rankings/route.ts         # GET leaderboard (dense ranking)
+│           ├── items/
+│           │   └── order/route.ts        # PATCH reorder items (creator, LOBBY only)
 │           └── matches/[id]/
 │               └── winner/route.ts       # POST set winner (creator)
 │       └── picks/route.ts               # GET/POST picks

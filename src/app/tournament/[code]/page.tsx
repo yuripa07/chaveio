@@ -138,7 +138,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     });
   }
 
-  // Initialize localItems once when tournamentData first loads
+  // Intentionally one-time: polling must not overwrite localItems after a drag reorder.
+  // A page reload is the recovery path if another session changes the order.
   useEffect(() => {
     if (tournamentData?.items && !itemsInitialized.current) {
       setLocalItems(tournamentData.items);
@@ -160,6 +161,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
     const oldIndex = localItems.findIndex((i) => i.id === active.id);
     const newIndex = localItems.findIndex((i) => i.id === over.id);
+    // Snapshot before the optimistic move — used to revert if the API call fails.
+    // Note: concurrent drags while a request is in-flight will use the latest snapshot.
     const previousItems = localItems;
     const newItems = arrayMove(localItems, oldIndex, newIndex);
 
