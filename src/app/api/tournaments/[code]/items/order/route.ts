@@ -81,7 +81,6 @@ export async function PATCH(
   const round1 = tournament.rounds[0];
 
   await prisma.$transaction(async (tx) => {
-    // Update each item's seed to its new position
     await Promise.all(
       itemIds.map((itemId, index) =>
         tx.tournamentItem.update({
@@ -91,15 +90,13 @@ export async function PATCH(
       )
     );
 
-    // Build new seed → itemId lookup
     const seedToItemId = new Map<number, string>(
       itemIds.map((itemId, index) => [index + 1, itemId])
     );
 
-    // Update round-1 match slots to reflect new seeding
     await Promise.all(
       pairs.map(([seed1, seed2], i) => {
-        const match = round1.matches[i];
+        const match = round1.matches.find((m) => m.matchNumber === i + 1)!;
         const slot1 = match.slots.find((s) => s.position === 1)!;
         const slot2 = match.slots.find((s) => s.position === 2)!;
         return Promise.all([
