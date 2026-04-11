@@ -55,7 +55,7 @@ export async function handleRequest<T = unknown>(
   if (opts?.parseBody) {
     const body = await bodyPromise;
     if (body === null) {
-      return { ok: false, response: Response.json({ error: "Invalid JSON" }, { status: 400 }) };
+      return { ok: false, response: Response.json({ error: "Requisição inválida" }, { status: 400 }) };
     }
     return { ok: true, payload, body: body as T };
   }

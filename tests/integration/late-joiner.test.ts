@@ -55,7 +55,7 @@ describe("Winner API — gate on all picks submitted", () => {
     const res = await setWinner(code, match.id, match.slots[0].itemId, creatorToken);
     expect(res.status).toBe(409);
     const body = await res.json();
-    expect(body.error).toMatch(/picks/i);
+    expect(body.error).toMatch(/palpites/i);
   });
 
   it("allows resolution once all participants have submitted", async () => {

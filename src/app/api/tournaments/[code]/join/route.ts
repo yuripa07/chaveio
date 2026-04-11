@@ -13,7 +13,7 @@ export async function POST(
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Requisição inválida" }, { status: 400 });
   }
 
   const { displayName, password } = body as {
@@ -22,7 +22,7 @@ export async function POST(
   };
 
   if (!displayName || !password) {
-    return Response.json({ error: "Missing required fields" }, { status: 400 });
+    return Response.json({ error: "Campos obrigatórios não preenchidos" }, { status: 400 });
   }
 
   const tournament = await prisma.tournament.findUnique({
@@ -32,7 +32,7 @@ export async function POST(
     },
   });
   if (!tournament) {
-    return Response.json({ error: "Tournament not found" }, { status: 404 });
+    return Response.json({ error: "Torneio não encontrado" }, { status: 404 });
   }
 
   const passwordOk = await bcrypt.compare(password, tournament.passwordHash);

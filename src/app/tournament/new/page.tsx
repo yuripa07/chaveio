@@ -34,6 +34,9 @@ export default function NewTournament() {
   const filledItems = items.filter((item) => item.trim());
   const numRounds = totalRoundsFor(filledItems.length);
   const isValidCount = numRounds !== null;
+  const allRoundNamesFilled =
+    numRounds !== null &&
+    Array.from({ length: numRounds }).every((_, i) => (roundNames[i] ?? "").trim() !== "");
 
   function handleItemChange(index: number, value: string) {
     setItems((previous) => {
@@ -173,7 +176,6 @@ export default function NewTournament() {
                   <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700">
                     <ChevronRight className="h-3.5 w-3.5 text-zinc-400" />
                     Tema de cada rodada
-                    <span className="ml-1 text-xs font-normal text-zinc-400">(opcional)</span>
                   </label>
                   <p className="mt-0.5 text-xs text-zinc-400">
                     O que está sendo disputado em cada fase? Ex: &ldquo;Melhor bandeira&rdquo;, &ldquo;Melhor culinária&rdquo;.
@@ -253,7 +255,7 @@ export default function NewTournament() {
 
             <button
               type="submit"
-              disabled={loading || !isValidCount}
+              disabled={loading || !allRoundNamesFilled || !name.trim() || !creatorName.trim() || !password}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
