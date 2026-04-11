@@ -18,14 +18,14 @@ export async function PATCH(
 
   if (!Array.isArray(itemIds) || itemIds.length === 0) {
     return Response.json(
-      { error: "Lista de candidatos inválida" },
+      { error: "Invalid candidates list" },
       { status: 400 }
     );
   }
 
   if (new Set(itemIds).size !== itemIds.length) {
     return Response.json(
-      { error: "Lista de candidatos contém duplicatas" },
+      { error: "Candidates list contains duplicates" },
       { status: 400 }
     );
   }
@@ -48,19 +48,19 @@ export async function PATCH(
   });
 
   if (!tournament || tournament.id !== payload.tournamentId) {
-    return Response.json({ error: "Torneio não encontrado" }, { status: 404 });
+    return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
 
   if (tournament.status !== "LOBBY") {
     return Response.json(
-      { error: "O torneio já foi iniciado" },
+      { error: "Tournament has already started" },
       { status: 409 }
     );
   }
 
   if (tournament.participants.some((p) => p.hasSubmittedPicks)) {
     return Response.json(
-      { error: "Não é possível reordenar: um participante já enviou palpites" },
+      { error: "Cannot reorder: a participant has already submitted picks" },
       { status: 409 }
     );
   }
@@ -71,7 +71,7 @@ export async function PATCH(
     !itemIds.every((id) => tournamentItemIds.has(id))
   ) {
     return Response.json(
-      { error: "A lista de candidatos não corresponde ao torneio" },
+      { error: "Candidates list does not match tournament" },
       { status: 400 }
     );
   }

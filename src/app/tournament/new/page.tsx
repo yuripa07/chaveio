@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "@/contexts/locale-context";
 import { Trophy, LayoutList, Tag, User, Lock, CheckCircle2, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { setStoredToken } from "@/lib/token-storage";
+import { translateApiError } from "@/lib/translate-api-error";
 import { cn } from "@/lib/cn";
 import { INPUT_CLASS } from "@/constants/styles";
 import { VALID_TOURNAMENT_SIZES, MAX_TOURNAMENT_SIZE } from "@/constants/tournament";
@@ -82,7 +83,7 @@ export default function NewTournament() {
         }),
       });
       const body = await response.json();
-      if (!response.ok) { setError(body.error ?? t.createTournament.somethingWentWrong); return; }
+      if (!response.ok) { setError(translateApiError(body.error, t) ?? t.createTournament.somethingWentWrong); return; }
       setStoredToken(body.code, body.token);
       router.push(`/tournament/${body.code}`);
     } catch {

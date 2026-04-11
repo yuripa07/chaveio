@@ -101,7 +101,6 @@ export interface Translations {
     picksSaved: string;
     saveFailed: string;
     reorderError: string;
-    reorderPicksError: string;
     reorderNetworkError: string;
     dragToReorder: string;
   };
@@ -148,6 +147,7 @@ export interface Translations {
     round: (n: number) => string;
     tbd: string;
   };
+  apiErrors: Record<string, string>;
 }
 
 export const ptBR: Translations = {
@@ -251,7 +251,6 @@ export const ptBR: Translations = {
     picksSaved: "Palpites enviados!",
     saveFailed: "Falha ao salvar",
     reorderError: "Erro ao reordenar",
-    reorderPicksError: "Não é possível reordenar: um participante já enviou palpites",
     reorderNetworkError: "Erro de rede ao reordenar",
     dragToReorder: "Arrastar para reordenar",
   },
@@ -298,6 +297,37 @@ export const ptBR: Translations = {
     final: "Final",
     round: (n) => `Rodada ${n}`,
     tbd: "A definir",
+  },
+  apiErrors: {
+    "Invalid request body": "Requisição inválida",
+    "Missing token": "Token ausente",
+    "Invalid token": "Token inválido",
+    "Creator only": "Acesso apenas para criadores",
+    "Required fields are missing": "Campos obrigatórios não preenchidos",
+    "Number of candidates must be 4, 8, 16, or 32": "O número de candidatos deve ser 4, 8, 16 ou 32",
+    "Failed to generate tournament code": "Erro ao gerar código do torneio",
+    "Tournament not found": "Torneio não encontrado",
+    "Access denied": "Acesso negado",
+    "You are no longer a participant in this tournament": "Você não é mais um participante deste torneio",
+    "Wrong password": "Senha incorreta",
+    "This tournament has ended. New participants cannot join.": "Este torneio já foi finalizado. Novos participantes não podem entrar.",
+    "Tournament has already started": "O torneio já foi iniciado",
+    "All participants must submit their picks before starting the tournament": "Todos os participantes precisam enviar seus palpites antes de iniciar o torneio",
+    "Bracket not found": "Chaveamento não encontrado",
+    "Invalid candidates list": "Lista de candidatos inválida",
+    "Candidates list contains duplicates": "Lista de candidatos contém duplicatas",
+    "Cannot reorder: a participant has already submitted picks": "Não é possível reordenar: um participante já enviou palpites",
+    "Candidates list does not match tournament": "A lista de candidatos não corresponde ao torneio",
+    "Participant not found": "Participante não encontrado",
+    "Cannot kick the tournament creator": "Não é possível expulsar o criador do torneio",
+    "Match not found": "Partida não encontrada",
+    "Match already resolved": "Esta partida já foi resolvida",
+    "Winner is not in this match": "O vencedor não está nesta partida",
+    "All participants must submit their picks before resolving matches": "Todos os participantes precisam enviar seus palpites antes de resolver partidas",
+    "This tournament has ended": "Este torneio já foi finalizado",
+    "Cannot change picks for resolved matches": "Não é possível alterar palpites de partidas já resolvidas",
+    "Tournament code is required": "Código do torneio não informado",
+    "Rankings are only available after the tournament starts": "O ranking está disponível apenas após o início do torneio",
   },
 };
 
@@ -402,7 +432,6 @@ export const en: Translations = {
     picksSaved: "Picks submitted!",
     saveFailed: "Failed to save",
     reorderError: "Failed to reorder",
-    reorderPicksError: "Cannot reorder: a participant has already submitted picks",
     reorderNetworkError: "Network error while reordering",
     dragToReorder: "Drag to reorder",
   },
@@ -450,6 +479,7 @@ export const en: Translations = {
     round: (n) => `Round ${n}`,
     tbd: "TBD",
   },
+  apiErrors: {},
 };
 
 export const translations: Record<Locale, Translations> = { "pt-BR": ptBR, en };

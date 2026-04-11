@@ -9,6 +9,7 @@ import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { usePolling } from "@/hooks/use-polling";
 import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
+import { translateApiError } from "@/lib/translate-api-error";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
 import BracketView from "@/components/bracket-view";
@@ -111,7 +112,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       });
       if (!res.ok) {
         setLocalItems(previousItems);
-        setReorderError(res.status === 409 ? t.bracket.reorderPicksError : t.bracket.reorderError);
+        const reorderBody = await res.json().catch(() => ({}));
+        setReorderError(translateApiError(reorderBody.error, t) ?? t.bracket.reorderError);
       } else {
         // Reload to sync bracket view with new round-1 pairings
         const newState = await loadState(token ?? "");
@@ -171,7 +173,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         body: JSON.stringify({ tournamentCode: code, picks: picksPayload }),
       });
       if (!response.ok) {
-        setError((await response.json()).error ?? t.bracket.saveFailed);
+        const saveBody = await response.json();
+        setError(translateApiError(saveBody.error, t) ?? t.bracket.saveFailed);
         return;
       }
       setSaved(true);

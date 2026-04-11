@@ -17,12 +17,12 @@ export async function GET(
   });
 
   if (!tournament || tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Torneio não encontrado" }, { status: 403 });
+    return Response.json({ error: "Tournament not found" }, { status: 403 });
   }
 
   if (tournament.status === "LOBBY") {
     return Response.json(
-      { error: "O ranking está disponível apenas após o início do torneio" },
+      { error: "Rankings are only available after the tournament starts" },
       { status: 403 }
     );
   }

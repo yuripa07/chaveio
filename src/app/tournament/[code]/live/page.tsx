@@ -8,6 +8,7 @@ import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/cn";
+import { translateApiError } from "@/lib/translate-api-error";
 import { TournamentStatus, RoundStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
 import { LivePageSkeleton } from "@/components/page-spinner";
@@ -86,7 +87,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setWinnerError(body.error ?? t.live.winnerError);
+        setWinnerError(translateApiError(body.error, t) ?? t.live.winnerError);
         return;
       }
       const result = await loadState(token);
@@ -112,7 +113,8 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setKickError((await res.json()).error ?? t.live.kickError);
+        const liveKickBody = await res.json();
+        setKickError(translateApiError(liveKickBody.error, t) ?? t.live.kickError);
         return;
       }
       setKickTarget(null);

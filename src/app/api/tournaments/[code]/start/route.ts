@@ -20,18 +20,18 @@ export async function POST(
   });
 
   if (!tournament || tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Torneio não encontrado" }, { status: 404 });
+    return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
 
   if (tournament.status !== "LOBBY") {
-    return Response.json({ error: "O torneio já foi iniciado" }, { status: 409 });
+    return Response.json({ error: "Tournament has already started" }, { status: 409 });
   }
 
   const pending = tournament.participants.filter((p) => !p.hasSubmittedPicks);
   if (pending.length > 0) {
     return Response.json(
       {
-        error: "Todos os participantes precisam enviar seus palpites antes de iniciar o torneio",
+        error: "All participants must submit their picks before starting the tournament",
         pendingParticipants: pending.map((p) => p.displayName),
       },
       { status: 409 }
@@ -40,7 +40,7 @@ export async function POST(
 
   const round1 = tournament.rounds.find((r) => r.roundNumber === 1);
   if (!round1) {
-    return Response.json({ error: "Chaveamento não encontrado" }, { status: 500 });
+    return Response.json({ error: "Bracket not found" }, { status: 500 });
   }
 
   await prisma.$transaction(async (tx) => {

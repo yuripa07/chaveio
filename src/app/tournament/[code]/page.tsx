@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { translateApiError } from "@/lib/translate-api-error";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/constants/styles";
@@ -89,7 +90,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         body: JSON.stringify({ displayName: joinName, password: joinPassword }),
       });
       const body = await response.json();
-      if (!response.ok) { setJoinError(body.error ?? t.lobby.joinFailed); return; }
+      if (!response.ok) { setJoinError(translateApiError(body.error, t) ?? t.lobby.joinFailed); return; }
       setTokenFromResponse(code, body.token);
       const data = await fetchState(body.token);
       if (data) setTournamentData(data);
@@ -132,7 +133,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setKickError((await res.json()).error ?? t.lobby.kickError);
+        const kickBody = await res.json();
+        setKickError(translateApiError(kickBody.error, t) ?? t.lobby.kickError);
         return;
       }
       setKickTarget(null);
