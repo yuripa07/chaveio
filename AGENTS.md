@@ -106,6 +106,9 @@ src/
 │   ├── result-icon.tsx       # Correct/incorrect/pending SVG icons
 │   ├── score-stat.tsx        # Score display card
 │   ├── sortable-bracket-item.tsx  # Drag-and-drop sortable item row (lobby, creator only)
+│   ├── kick-participant-dialog.tsx  # Accessible kick confirmation modal (ARIA, focus, Escape, click-outside)
+│   ├── participant-avatar.tsx  # Circular avatar with participant initial (indigo theme)
+│   ├── section-header.tsx     # Icon + uppercase label + optional count (text-xxs, used in lobby)
 │   ├── spinner.tsx           # Inline spinner (sm/md/lg)
 │   └── tournament-header.tsx # Sticky header with code/name/back
 ├── constants/
