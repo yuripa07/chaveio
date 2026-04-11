@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
-import { resolveAuthGuardStatus, type AuthGuardStatus } from "@/lib/auth-guard";
+import { resolveAuthGuardStatus, AUTH_GUARD_REASON, type AuthGuardStatus } from "@/lib/auth-guard";
 
 type Options = {
   requireCreator?: boolean;
@@ -32,10 +32,10 @@ export function useRequireParticipant(
   const reason = status.ready ? null : status.reason;
 
   useEffect(() => {
-    if (reason === null || reason === "not-ready") return;
-    if (reason === "no-token") {
+    if (reason === null || reason === AUTH_GUARD_REASON.NOT_READY) return;
+    if (reason === AUTH_GUARD_REASON.NO_TOKEN) {
       router.replace(`/tournament/${code}`);
-    } else if (reason === "not-creator") {
+    } else if (reason === AUTH_GUARD_REASON.NOT_CREATOR) {
       router.replace(`/tournament/${code}/bracket`);
     }
   }, [reason, code, router]);

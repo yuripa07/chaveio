@@ -1,28 +1,28 @@
 import { describe, it, expect } from "vitest";
-import { resolveAuthGuardStatus } from "@/lib/auth-guard";
+import { resolveAuthGuardStatus, AUTH_GUARD_REASON } from "@/lib/auth-guard";
 
 describe("resolveAuthGuardStatus", () => {
   describe("when tokenReady is false", () => {
     it("returns ready: false with reason not-ready", () => {
       const result = resolveAuthGuardStatus(false, null, false, null, false);
-      expect(result).toEqual({ ready: false, reason: "not-ready" });
+      expect(result).toEqual({ ready: false, reason: AUTH_GUARD_REASON.NOT_READY });
     });
 
     it("returns not-ready even if a token is present (SSR hydration safety)", () => {
       const result = resolveAuthGuardStatus(false, "some-token", true, "pid", false);
-      expect(result).toEqual({ ready: false, reason: "not-ready" });
+      expect(result).toEqual({ ready: false, reason: AUTH_GUARD_REASON.NOT_READY });
     });
   });
 
   describe("when tokenReady is true but token is null", () => {
     it("returns ready: false with reason no-token", () => {
       const result = resolveAuthGuardStatus(true, null, false, null, false);
-      expect(result).toEqual({ ready: false, reason: "no-token" });
+      expect(result).toEqual({ ready: false, reason: AUTH_GUARD_REASON.NO_TOKEN });
     });
 
     it("returns no-token even when requireCreator is true", () => {
       const result = resolveAuthGuardStatus(true, null, false, null, true);
-      expect(result).toEqual({ ready: false, reason: "no-token" });
+      expect(result).toEqual({ ready: false, reason: AUTH_GUARD_REASON.NO_TOKEN });
     });
   });
 
@@ -51,7 +51,7 @@ describe("resolveAuthGuardStatus", () => {
   describe("requireCreator: true", () => {
     it("returns ready: false with reason not-creator when isCreator is false", () => {
       const result = resolveAuthGuardStatus(true, "token-abc", false, "pid-1", true);
-      expect(result).toEqual({ ready: false, reason: "not-creator" });
+      expect(result).toEqual({ ready: false, reason: AUTH_GUARD_REASON.NOT_CREATOR });
     });
 
     it("returns ready: true when isCreator is true", () => {
