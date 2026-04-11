@@ -69,6 +69,8 @@ src/
 │           ├── join/route.ts             # POST join
 │           ├── start/route.ts            # POST start (creator)
 │           ├── rankings/route.ts         # GET leaderboard (dense ranking)
+│           ├── items/
+│           │   └── order/route.ts        # PATCH reorder items (creator, LOBBY only)
 │           └── matches/[id]/
 │               └── winner/route.ts       # POST set winner (creator)
 │       └── picks/route.ts               # GET/POST picks
@@ -99,6 +101,7 @@ src/
 │   ├── rankings-table.tsx    # Leaderboard table (highlights current user)
 │   ├── result-icon.tsx       # Correct/incorrect/pending SVG icons
 │   ├── score-stat.tsx        # Score display card
+│   ├── sortable-bracket-item.tsx  # Drag-and-drop sortable item row (lobby, creator only)
 │   ├── spinner.tsx           # Inline spinner (sm/md/lg)
 │   └── tournament-header.tsx # Sticky header with code/name/back
 ├── constants/
@@ -170,6 +173,7 @@ Header: `Authorization: Bearer <token>`
 | GET | `/api/tournaments/[code]/check` | -- | Public existence check `{ exists, status }` |
 | POST | `/api/tournaments/[code]/join` | -- | Join (password auth), return `{ token }` |
 | POST | `/api/tournaments/[code]/start` | Creator | Activate round 1, set tournament ACTIVE |
+| PATCH | `/api/tournaments/[code]/items/order` | Creator | Reorder bracket items (seeds + round-1 slots); blocked if any picks submitted |
 | GET | `/api/tournaments/[code]/rankings` | Token | Leaderboard with dense ranking |
 | POST | `/api/tournaments/[code]/matches/[id]/winner` | Creator | Set winner, score picks, advance bracket |
 | POST | `/api/picks` | Token | Upsert all picks (atomic transaction) |
