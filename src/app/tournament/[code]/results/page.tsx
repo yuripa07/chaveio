@@ -4,6 +4,7 @@ import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { usePolling } from "@/hooks/use-polling";
+import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_RESULTS } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
@@ -23,6 +24,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   const { code } = use(params);
   const { clearToken } = useTournamentToken(code);
   const auth = useRequireParticipant(code);
+  const { t } = useLocale();
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [myPicks, setMyPicks] = useState<PickResult[]>([]);
@@ -95,12 +97,12 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
   const statusBadge = isFinished ? (
     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-      Finalizado
+      {t.results.finished}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
       <PulseDot color="amber" size="sm" />
-      Em andamento
+      {t.results.inProgress}
     </span>
   );
 
@@ -113,7 +115,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
           isFinished ? "/" : auth.isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`
         }
         backLabel={
-          isFinished ? "Início" : auth.isCreator ? "Definir vencedores" : "Meus palpites"
+          isFinished ? t.common.home : auth.isCreator ? t.results.setWinnersBack : t.results.myPicksBack
         }
         rightSlot={statusBadge}
       />
@@ -122,27 +124,27 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
         <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-6 py-6 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-75">Sua pontuação</p>
+            <p className="text-xs font-semibold uppercase tracking-wider opacity-75">{t.results.yourScore}</p>
             <p className="mt-1 text-5xl font-black tracking-tight">{myTotalPoints}</p>
-            <p className="mt-0.5 text-sm font-medium opacity-75">pontos</p>
+            <p className="mt-0.5 text-sm font-medium opacity-75">{t.results.points}</p>
           </div>
           <div className="flex divide-x divide-zinc-100">
-            <ScoreStat label="Corretos" value={correctCount} />
-            <ScoreStat label="Disputados" value={resolvedCount} />
-            <ScoreStat label="Aguardando" value={myPicks.length - resolvedCount} />
+            <ScoreStat label={t.results.correct} value={correctCount} />
+            <ScoreStat label={t.results.played} value={resolvedCount} />
+            <ScoreStat label={t.results.waiting} value={myPicks.length - resolvedCount} />
           </div>
         </div>
 
         {rankings.length > 1 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.results.rankingSection}</h2>
             <RankingsTable rankings={rankings} currentParticipantId={auth.participantId} />
           </section>
         )}
 
         {resolvedCount > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Meus palpites</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.results.myPicksSection}</h2>
             <div className="space-y-2">
               {state.rounds.flatMap((round) =>
                 round.matches
@@ -175,11 +177,11 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                             <span className="font-semibold text-zinc-800 truncate">
                               {winner?.name ?? "?"}
                             </span>
-                            <span className="text-zinc-400">ganhou</span>
+                            <span className="text-zinc-400">{t.results.won}</span>
                           </div>
                           {myItem && (
                             <p className="mt-0.5 text-xs text-zinc-400">
-                              Você escolheu:{" "}
+                              {t.results.youChose}{" "}
                               <span className={isCorrect ? "font-semibold text-emerald-600" : "text-red-400"}>
                                 {myItem.name}
                               </span>
@@ -206,7 +208,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
         {state.rounds.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Chaveamento</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.results.bracketSection}</h2>
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
               <BracketView
                 rounds={state.rounds}
@@ -222,7 +224,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
         {resolvedCount === 0 && state.rounds.length === 0 && (
           <p className="py-12 text-center text-sm text-zinc-400">
-            Nenhum resultado ainda — aguardando a primeira partida.
+            {t.results.noResults}
           </p>
         )}
 
