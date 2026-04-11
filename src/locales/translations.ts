@@ -101,6 +101,7 @@ export interface Translations {
     picksSaved: string;
     saveFailed: string;
     reorderError: string;
+    reorderPicksError: string;
     reorderNetworkError: string;
     dragToReorder: string;
   };
@@ -145,6 +146,7 @@ export interface Translations {
   bracketView: {
     final: string;
     round: (n: number) => string;
+    tbd: string;
   };
 }
 
@@ -249,6 +251,7 @@ export const ptBR: Translations = {
     picksSaved: "Palpites enviados!",
     saveFailed: "Falha ao salvar",
     reorderError: "Erro ao reordenar",
+    reorderPicksError: "Não é possível reordenar: um participante já enviou palpites",
     reorderNetworkError: "Erro de rede ao reordenar",
     dragToReorder: "Arrastar para reordenar",
   },
@@ -294,6 +297,7 @@ export const ptBR: Translations = {
   bracketView: {
     final: "Final",
     round: (n) => `Rodada ${n}`,
+    tbd: "A definir",
   },
 };
 
@@ -398,6 +402,7 @@ export const en: Translations = {
     picksSaved: "Picks submitted!",
     saveFailed: "Failed to save",
     reorderError: "Failed to reorder",
+    reorderPicksError: "Cannot reorder: a participant has already submitted picks",
     reorderNetworkError: "Network error while reordering",
     dragToReorder: "Drag to reorder",
   },
@@ -443,6 +448,7 @@ export const en: Translations = {
   bracketView: {
     final: "Final",
     round: (n) => `Round ${n}`,
+    tbd: "TBD",
   },
 };
 

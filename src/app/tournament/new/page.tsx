@@ -112,7 +112,7 @@ export default function NewTournament() {
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
       <div className="border-b border-zinc-100 bg-white px-6 py-4">
-        <BackLink href="/" />
+        <BackLink href="/" label={t.common.back} />
       </div>
 
       <div className="flex flex-1 justify-center px-6 py-10">

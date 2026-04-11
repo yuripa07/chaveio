@@ -110,9 +110,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         body: JSON.stringify({ itemIds: newItems.map((i) => i.id) }),
       });
       if (!res.ok) {
-        const body = await res.json();
         setLocalItems(previousItems);
-        setReorderError(body.error ?? t.bracket.reorderError);
+        setReorderError(res.status === 409 ? t.bracket.reorderPicksError : t.bracket.reorderError);
       } else {
         // Reload to sync bracket view with new round-1 pairings
         const newState = await loadState(token ?? "");

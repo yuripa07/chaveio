@@ -127,7 +127,7 @@ export default function BracketView({
                                   !isFirstSlot && "border-t border-zinc-100"
                                 )}
                               >
-                                A definir
+                                {t.bracketView.tbd}
                               </div>
                             );
                           }
