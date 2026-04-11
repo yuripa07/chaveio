@@ -11,6 +11,7 @@ import { RoundStatus } from "@/constants/tournament";
 import { PulseDot } from "@/components/pulse-dot";
 import { ResultIcon } from "@/components/result-icon";
 import { ReorderableSlotItem } from "@/components/reorderable-slot-item";
+import { useLocale } from "@/contexts/locale-context";
 import type { TournamentItem, BracketRound } from "@/types/tournament";
 
 type BracketViewProps = {
@@ -34,6 +35,7 @@ export default function BracketView({
   reorderMode = false,
   activeReorderItemId = null,
 }: BracketViewProps) {
+  const { t } = useLocale();
   if (!rounds.length) return null;
   const totalRounds = rounds.length;
 
@@ -50,7 +52,7 @@ export default function BracketView({
             <div key={round.id} className="flex flex-col" style={{ width: BRACKET_COLUMN_WIDTH + 32 }}>
               <div className="mb-2 px-4">
                 <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
-                  {round.name || (isLastRound ? "Final" : `Rodada ${round.roundNumber}`)}
+                  {round.name || (isLastRound ? t.bracketView.final : t.bracketView.round(round.roundNumber))}
                   <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-zinc-500">
                     {round.pointValue}pt
                   </span>
@@ -125,7 +127,7 @@ export default function BracketView({
                                   !isFirstSlot && "border-t border-zinc-100"
                                 )}
                               >
-                                A definir
+                                {t.bracketView.tbd}
                               </div>
                             );
                           }

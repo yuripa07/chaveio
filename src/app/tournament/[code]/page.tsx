@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { translateApiError } from "@/lib/translate-api-error";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/constants/styles";
@@ -14,10 +15,12 @@ import { ErrorAlert } from "@/components/error-alert";
 import { LobbyCTA } from "@/components/lobby-cta";
 import { LobbyPageSkeleton } from "@/components/page-spinner";
 import { Spinner } from "@/components/spinner";
+import { useLocale } from "@/contexts/locale-context";
 import type { Participant, TournamentState } from "@/types/tournament";
 
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
+  const { t } = useLocale();
   const router = useRouter();
   const { token, tokenReady, participantId, isCreator, setTokenFromResponse, clearToken } = useTournamentToken(code);
 
@@ -87,12 +90,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         body: JSON.stringify({ displayName: joinName, password: joinPassword }),
       });
       const body = await response.json();
-      if (!response.ok) { setJoinError(body.error ?? "Falha ao entrar"); return; }
+      if (!response.ok) { setJoinError(translateApiError(body.error, t) ?? t.lobby.joinFailed); return; }
       setTokenFromResponse(code, body.token);
       const data = await fetchState(body.token);
       if (data) setTournamentData(data);
     } catch {
-      setJoinError("Erro de rede");
+      setJoinError(t.common.networkError);
     } finally {
       setJoining(false);
     }
@@ -130,7 +133,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setKickError((await res.json()).error ?? "Erro ao expulsar");
+        const kickBody = await res.json();
+        setKickError(translateApiError(kickBody.error, t) ?? t.lobby.kickError);
         return;
       }
       setKickTarget(null);
@@ -140,7 +144,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           : prev
       );
     } catch {
-      setKickError("Erro de rede");
+      setKickError(t.common.networkError);
     } finally {
       setKicking(false);
     }
@@ -152,7 +156,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     return (
       <main className="flex min-h-screen flex-col bg-zinc-50">
         <div className="border-b border-zinc-100 bg-white px-6 py-4">
-          <BackLink href="/" label="Início" />
+          <BackLink href="/" label={t.common.home} />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
@@ -161,9 +165,9 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <Hash className="h-3.5 w-3.5 text-zinc-400" />
                 {code}
               </div>
-              <h1 className="text-2xl font-extrabold tracking-tight">Entrar no torneio</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight">{t.lobby.joinTitle}</h1>
               <p className="mt-1 text-sm text-zinc-500">
-                Escolha um nome para aparecer no placar e informe a senha do torneio.
+                {t.lobby.joinSubtitle}
               </p>
             </div>
 
@@ -172,8 +176,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Seu nome no placar"
-                  aria-label="Seu nome no placar"
+                  placeholder={t.lobby.yourNameOnScore}
+                  aria-label={t.lobby.yourNameOnScore}
                   value={joinName}
                   onChange={(event) => setJoinName(event.target.value)}
                   required
@@ -187,8 +191,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Senha do torneio"
-                  aria-label="Senha do torneio"
+                  placeholder={t.lobby.passwordLabel}
+                  aria-label={t.lobby.passwordLabel}
                   value={joinPassword}
                   onChange={(event) => setJoinPassword(event.target.value)}
                   required
@@ -199,7 +203,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-label={showPassword ? t.common.hidePassword : t.common.showPassword}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -215,12 +219,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 {joining ? (
                   <>
                     <Spinner size="sm" />
-                    Entrando…
+                    {t.lobby.joining}
                   </>
                 ) : (
                   <>
                     <LogIn className="h-4 w-4" />
-                    Entrar no torneio
+                    {t.lobby.joinButton}
                   </>
                 )}
               </button>
@@ -241,7 +245,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <Link href="/" className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
             <ChevronLeft className="h-4 w-4" />
-            Início
+            {t.common.home}
           </Link>
           <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600">
             <Trophy className="h-4 w-4" />
@@ -258,7 +262,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               {tournament.theme && <p className="mt-0.5 text-sm text-zinc-500">{tournament.theme}</p>}
             </div>
             <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-              Sala de espera
+              {t.lobby.waitingRoom}
             </span>
           </div>
 
@@ -267,7 +271,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               <Hash className="h-4 w-4 text-indigo-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xxs font-semibold uppercase tracking-wider text-zinc-400">Código do torneio</p>
+              <p className="text-xxs font-semibold uppercase tracking-wider text-zinc-400">{t.lobby.tournamentCode}</p>
               <p className="font-mono text-lg font-bold tracking-widest text-zinc-800">{code}</p>
             </div>
             <button
@@ -280,7 +284,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               )}
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado!" : "Copiar link"}
+              {copied ? t.lobby.copied : t.lobby.copyLink}
             </button>
           </div>
 
@@ -288,7 +292,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
                 <User className="h-3.5 w-3.5" />
-                Participantes · {participants.length}
+                {`${t.lobby.participantsSection} · ${participants.length}`}
               </h2>
               <ul className="space-y-2">
                 {participants.map((participant: Participant) => (
@@ -300,7 +304,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                     <div className="flex items-center gap-1.5">
                       {participant.isCreator && (
                         <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xxs font-semibold text-indigo-600">
-                          criador
+                          {t.common.creator}
                         </span>
                       )}
                       {participant.hasSubmittedPicks ? (
@@ -313,7 +317,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                           type="button"
                           onClick={() => { setKickTarget(participant); setKickError(""); }}
                           className="rounded-md p-0.5 text-zinc-300 hover:bg-red-50 hover:text-red-400 transition-colors"
-                          aria-label={`Expulsar ${participant.displayName}`}
+                          aria-label={t.common.kickParticipantAria(participant.displayName)}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -327,7 +331,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
                 <Trophy className="h-3.5 w-3.5" />
-                Chaveamento · {items.length} itens
+                {`${t.lobby.bracketSection} · ${t.lobby.items(items.length)}`}
               </h2>
               <ul className="space-y-1.5">
                 {items.map((item) => (
@@ -358,9 +362,9 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       {kickTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-base font-bold">Expulsar participante</h2>
+            <h2 className="text-base font-bold">{t.common.kickTitle}</h2>
             <p className="text-sm text-zinc-600">
-              Tem certeza que deseja expulsar <strong>{kickTarget.displayName}</strong>? Esta ação não pode ser desfeita.
+              {t.common.kickConfirm(kickTarget.displayName)}
             </p>
             {kickError && <ErrorAlert message={kickError} />}
             <div className="flex gap-3 justify-end">
@@ -370,7 +374,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 disabled={kicking}
                 className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40"
               >
-                Cancelar
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -379,7 +383,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
               >
                 {kicking && <Spinner size="sm" />}
-                Expulsar
+                {t.common.kick}
               </button>
             </div>
           </div>

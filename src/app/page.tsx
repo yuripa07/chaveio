@@ -7,6 +7,7 @@ import { PlusCircle, LogIn, Trophy, AlertCircle } from "lucide-react";
 import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/cn";
+import { useLocale } from "@/contexts/locale-context";
 
 // No `g` flag — avoids stale lastIndex when calling .test() repeatedly
 const VALID_CODE_CHARS = /[^A-Z2-9]/g;
@@ -14,6 +15,7 @@ const AMBIGUOUS_CHARS = /[01IO]/i;
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useLocale();
   const [code, setCode] = useState("");
   const [codeHint, setCodeHint] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export default function Home() {
   function handleCodeChange(event: React.ChangeEvent<HTMLInputElement>) {
     const raw = event.target.value.toUpperCase();
     if (AMBIGUOUS_CHARS.test(raw)) {
-      setCodeHint("Códigos não usam 0, 1, I ou O — difíceis de distinguir. Use A–Z (exceto I e O) ou 2–9.");
+      setCodeHint(t.landing.codeCharsHint);
     } else {
       setCodeHint(null);
     }
@@ -40,7 +42,7 @@ export default function Home() {
     try {
       const res = await fetch(`/api/tournaments/${trimmed}/check`);
       if (res.status === 404) {
-        setCodeError(`Torneio "${trimmed}" não encontrado. Verifique o código e tente novamente.`);
+        setCodeError(t.landing.tournamentNotFound(trimmed));
         return;
       }
     } catch {
@@ -65,7 +67,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900">Chaveio</h1>
-              <p className="mt-1.5 text-base text-zinc-500">Palpites de chaveamento para sua equipe</p>
+              <p className="mt-1.5 text-base text-zinc-500">{t.landing.tagline}</p>
             </div>
           </div>
 
@@ -75,7 +77,7 @@ export default function Home() {
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition"
             >
               <PlusCircle className="h-4 w-4" />
-              Criar torneio
+              {t.landing.createTournament}
             </Link>
 
             <div className="relative py-2">
@@ -84,7 +86,7 @@ export default function Home() {
               </div>
               <div className="relative flex justify-center">
                 <span className="bg-gradient-to-b from-indigo-50 to-white px-3 text-xs text-zinc-400">
-                  ou entre com um código
+                  {t.landing.orEnterCode}
                 </span>
               </div>
             </div>
@@ -132,11 +134,11 @@ export default function Home() {
                   </div>
                 ) : code.length > 0 && !codeComplete ? (
                   <p className="text-center text-xs text-zinc-400">
-                    {code.length} / {TOURNAMENT_CODE_LENGTH} caracteres
+                    {t.landing.codeProgress(code.length, TOURNAMENT_CODE_LENGTH)}
                   </p>
                 ) : codeComplete ? (
                   <p className="text-center text-xs font-medium text-emerald-600">
-                    Código completo — pronto para entrar!
+                    {t.landing.codeComplete}
                   </p>
                 ) : null}
               </div>
@@ -149,12 +151,12 @@ export default function Home() {
                 {joining ? (
                   <>
                     <Spinner size="sm" />
-                    Verificando…
+                    {t.landing.checking}
                   </>
                 ) : (
                   <>
                     <LogIn className="h-4 w-4" />
-                    Entrar no torneio
+                    {t.landing.joinTournament}
                   </>
                 )}
               </button>
@@ -164,7 +166,7 @@ export default function Home() {
       </div>
 
       <footer className="py-6 text-center text-xs text-zinc-400">
-        Chaveamento estilo bracket · Para atividades em equipe
+        {t.landing.footer}
       </footer>
     </main>
   );

@@ -4,10 +4,12 @@ import { use, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send, CheckCircle2, BarChart2 } from "lucide-react";
+import { useLocale } from "@/contexts/locale-context";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { usePolling } from "@/hooks/use-polling";
 import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
+import { translateApiError } from "@/lib/translate-api-error";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
 import BracketView from "@/components/bracket-view";
@@ -33,6 +35,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   const router = useRouter();
   const { token, participantId, isCreator, clearToken } = useTournamentToken(code);
   const auth = useRequireParticipant(code);
+  const { t } = useLocale();
 
   const [state, setState] = useState<BracketPageState | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
@@ -108,9 +111,9 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         body: JSON.stringify({ itemIds: newItems.map((i) => i.id) }),
       });
       if (!res.ok) {
-        const body = await res.json();
         setLocalItems(previousItems);
-        setReorderError(body.error ?? "Erro ao reordenar");
+        const reorderBody = await res.json().catch(() => ({}));
+        setReorderError(translateApiError(reorderBody.error, t) ?? t.bracket.reorderError);
       } else {
         // Reload to sync bracket view with new round-1 pairings
         const newState = await loadState(token ?? "");
@@ -123,7 +126,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       }
     } catch {
       setLocalItems(previousItems);
-      setReorderError("Erro de rede ao reordenar");
+      setReorderError(t.bracket.reorderNetworkError);
     }
   }
 
@@ -170,7 +173,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         body: JSON.stringify({ tournamentCode: code, picks: picksPayload }),
       });
       if (!response.ok) {
-        setError((await response.json()).error ?? "Falha ao salvar");
+        const saveBody = await response.json();
+        setError(translateApiError(saveBody.error, t) ?? t.bracket.saveFailed);
         return;
       }
       setSaved(true);
@@ -180,7 +184,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         router.replace(`/tournament/${code}`);
       }
     } catch {
-      setError("Erro de rede");
+      setError(t.common.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -244,10 +248,10 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         : "bg-indigo-50 text-indigo-600 ring-indigo-100"
     )}>
       {viewOnly
-        ? "Seus palpites"
+        ? t.bracket.yourPicks
         : isLateJoiner
-        ? `Palpites — a partir da rodada ${startRound}`
-        : "Preencha o chaveamento"}
+        ? t.bracket.fromRound(startRound)
+        : t.bracket.fillBracket}
     </span>
   );
 
@@ -257,7 +261,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         code={code}
         name={state.tournament.name}
         backHref={isLobby ? `/tournament/${code}` : "/"}
-        backLabel={isLobby ? "Sala de espera" : "Início"}
+        backLabel={isLobby ? t.bracket.waitingRoom : t.common.home}
         rightSlot={statusBadge}
       />
 
@@ -266,13 +270,13 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
           {viewOnly && (
             <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Palpites enviados — acompanhe o resultado ao vivo!
+              {t.bracket.picksSubmitted}
               <Link
                 href={`/tournament/${code}/results`}
                 className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
               >
                 <BarChart2 className="h-3.5 w-3.5" />
-                Ver ranking
+                {t.bracket.viewRanking}
               </Link>
             </div>
           )}
@@ -320,10 +324,10 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-zinc-500">
-                      {pickedCount} de {eligibleCount} palpites preenchidos
+                      {t.bracket.picksProgress(pickedCount, eligibleCount)}
                     </span>
                     {allPicked && (
-                      <span className="font-semibold text-emerald-600">Tudo preenchido!</span>
+                      <span className="font-semibold text-emerald-600">{t.bracket.allFilled}</span>
                     )}
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
@@ -346,24 +350,24 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                     {submitting ? (
                       <>
                         <Spinner size="sm" />
-                        {alreadySubmitted ? "Salvando…" : "Enviando…"}
+                        {alreadySubmitted ? t.bracket.saving : t.bracket.sending}
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        {alreadySubmitted ? "Editar palpites" : "Enviar palpites"}
+                        {alreadySubmitted ? t.bracket.editPicks : t.bracket.sendPicks}
                       </>
                     )}
                   </button>
                   {!allPicked && eligibleCount > 0 && (
                     <span className="text-xs text-zinc-400">
-                      Ainda faltam {eligibleCount - pickedCount} escolhas
+                      {t.bracket.stillMissing(eligibleCount - pickedCount)}
                     </span>
                   )}
                   {saved && (
                     <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
                       <CheckCircle2 className="h-4 w-4" />
-                      Palpites enviados!
+                      {t.bracket.picksSaved}
                     </span>
                   )}
                   {error && <span className="text-sm text-red-500">{error}</span>}

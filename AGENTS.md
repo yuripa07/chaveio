@@ -137,7 +137,8 @@ tests/
 
 docs/
 ├── frontend-conventions.md   # Frontend patterns and rules
-└── backend-conventions.md    # Backend patterns and rules
+├── backend-conventions.md    # Backend patterns and rules
+└── i18n.md                   # i18n: adding strings, API error translation, locale detection
 ```
 
 ## Database Models
@@ -255,6 +256,7 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 10. **No inline components/IIFEs** — extract to named components
 11. **Derive state during render** — don't use useEffect to sync derived state
 12. **Shared bracket logic** — `augmentRounds()`, `clearDownstream()` in `lib/bracket-client.ts`
+13. **i18n** — never hardcode UI strings; always use `useLocale()` + `t.*`; see `docs/i18n.md`
 
 ### Backend Patterns (see `docs/backend-conventions.md`)
 1. **`handleRequest()` helper** — `lib/api-utils.ts` handles auth + body parsing with consistent errors
@@ -265,6 +267,7 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 6. **Promise.all inside transactions** — parallelize independent writes
 7. **Response shapes**: mutations `{ success: true }`, queries `{ data }`, errors `{ error: "msg" }`
 8. **Auth gate testing** — always test both re-auth AND first-time-wrong-password (see docs/backend-conventions.md §8)
+9. **API error strings always in English** — frontend translates via `translateApiError()`; see `docs/i18n.md`
 
 ### Architecture Decisions
 | Decision | Rationale |

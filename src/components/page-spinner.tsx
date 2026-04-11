@@ -1,11 +1,15 @@
+"use client";
+
 import { Spinner } from "@/components/spinner";
+import { useLocale } from "@/contexts/locale-context";
 
 export function PageSpinner() {
+  const { t } = useLocale();
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-50">
       <div className="flex flex-col items-center gap-3">
         <Spinner size="lg" className="text-indigo-400" />
-        <p className="text-sm text-zinc-400">Carregando…</p>
+        <p className="text-sm text-zinc-400">{t.common.loading}</p>
       </div>
     </main>
   );
