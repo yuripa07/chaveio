@@ -98,33 +98,33 @@ export default function NewTournament() {
     if (count === 0) return null;
     if (isValidCount)
       return (
-        <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xxs font-bold text-emerald-700">
+        <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 text-xxs font-bold text-emerald-700 dark:text-emerald-400">
           <CheckCircle2 className="h-3 w-3" /> {count}
         </span>
       );
     const nextValidSize = (VALID_TOURNAMENT_SIZES as readonly number[]).find((size) => size > count);
     return (
-      <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-xxs font-bold text-amber-700">
+      <span className="ml-1.5 rounded-full bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-xxs font-bold text-amber-700 dark:text-amber-400">
         {count} — {t.createTournament.addUpTo(nextValidSize ?? MAX_TOURNAMENT_SIZE)}
       </span>
     );
   })();
 
   return (
-    <main className="flex min-h-screen flex-col bg-zinc-50">
-      <div className="border-b border-zinc-100 bg-white px-6 py-4">
+    <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
         <BackLink href="/" label={t.common.back} />
       </div>
 
       <div className="flex flex-1 justify-center px-6 py-10">
         <div className="w-full max-w-lg space-y-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
-              <Trophy className="h-5 w-5 text-indigo-600" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-950">
+              <Trophy className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">{t.createTournament.title}</h1>
-              <p className="mt-0.5 text-sm text-zinc-500">{t.createTournament.subtitle}</p>
+              <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{t.createTournament.subtitle}</p>
             </div>
           </div>
 
@@ -143,17 +143,17 @@ export default function NewTournament() {
             </FormField>
 
             <div className="space-y-2">
-              <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700">
+              <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 <LayoutList className="h-3.5 w-3.5 text-zinc-400" />
                 {t.createTournament.candidatesLabel} {countLabel}
               </label>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">
                 {t.createTournament.candidatesHint}
               </p>
               <div className="space-y-2">
                 {items.map((value, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xs font-bold text-zinc-400">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-400 dark:text-zinc-500">
                       {index + 1}
                     </span>
                     <input
@@ -176,11 +176,11 @@ export default function NewTournament() {
             {isValidCount && numRounds !== null && (
               <div className="space-y-3">
                 <div>
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     <ChevronRight className="h-3.5 w-3.5 text-zinc-400" />
                     {t.createTournament.roundThemesLabel}
                   </label>
-                  <p className="mt-0.5 text-xs text-zinc-400">
+                  <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
                     {t.createTournament.roundThemesHint}
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function NewTournament() {
                     const isFinal = roundIndex === numRounds - 1;
                     return (
                       <div key={roundIndex} className="flex items-center gap-3">
-                        <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xxs font-bold text-indigo-600 ring-1 ring-indigo-100">
+                        <span className="shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950 px-2.5 py-0.5 text-xxs font-bold text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-100 dark:ring-indigo-900">
                           {isFinal ? t.createTournament.final : t.createTournament.roundLabel(roundIndex + 1)}
                         </span>
                         <input
@@ -213,8 +213,8 @@ export default function NewTournament() {
               </div>
             )}
 
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 space-y-4">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 space-y-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 <User className="h-3.5 w-3.5" />
                 {t.createTournament.creatorSection}
               </p>
@@ -244,7 +244,7 @@ export default function NewTournament() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                       aria-label={showPassword ? t.common.hidePassword : t.common.showPassword}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
