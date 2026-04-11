@@ -1,5 +1,3 @@
-// src/locales/translations.ts
-
 export type Locale = "pt-BR" | "en";
 
 export interface Translations {
@@ -112,7 +110,6 @@ export interface Translations {
     confirmWinnerText: (name: string) => string;
     waitingPicksFrom: string;
     picksRequired: string;
-    roundLabel: (n: number) => string;
     clickWinner: string;
     match: (n: number) => string;
     saving: string;
@@ -122,7 +119,6 @@ export interface Translations {
     participantsSection: string;
     winnerError: string;
     kickError: string;
-    backLabel: string;
   };
   results: {
     yourScore: string;
@@ -149,9 +145,6 @@ export interface Translations {
   bracketView: {
     final: string;
     round: (n: number) => string;
-  };
-  pageSpinner: {
-    loading: string;
   };
 }
 
@@ -266,7 +259,6 @@ export const ptBR: Translations = {
       `Tem certeza que ${name} ganhou essa partida? Essa ação não pode ser desfeita.`,
     waitingPicksFrom: "Aguardando palpites de:",
     picksRequired: "Os vencedores não podem ser definidos até que todos enviem seus palpites.",
-    roundLabel: (n) => `Rodada ${n}`,
     clickWinner: "clique no vencedor",
     match: (n) => `Partida ${n}`,
     saving: "Salvando…",
@@ -276,7 +268,6 @@ export const ptBR: Translations = {
     participantsSection: "Participantes",
     winnerError: "Erro ao salvar vencedor",
     kickError: "Erro ao expulsar",
-    backLabel: "Início",
   },
   results: {
     yourScore: "Sua pontuação",
@@ -303,9 +294,6 @@ export const ptBR: Translations = {
   bracketView: {
     final: "Final",
     round: (n) => `Rodada ${n}`,
-  },
-  pageSpinner: {
-    loading: "Carregando…",
   },
 };
 
@@ -350,7 +338,7 @@ export const en: Translations = {
     candidatesHint: "Must have 4, 8, 16 or 32 items. Press Enter to advance, Backspace to remove.",
     itemPlaceholder: (n) => `Item ${n}`,
     addUpTo: (n) => `add up to ${n}`,
-    roundThemesLabel: "Round theme",
+    roundThemesLabel: "Round themes",
     roundThemesHint: `What is being competed in each phase? E.g.: "Best flag", "Best cuisine".`,
     final: "Final",
     roundLabel: (n) => `Round ${n}`,
@@ -420,7 +408,6 @@ export const en: Translations = {
       `Are you sure ${name} won this match? This action cannot be undone.`,
     waitingPicksFrom: "Waiting for picks from:",
     picksRequired: "Winners cannot be set until everyone submits their picks.",
-    roundLabel: (n) => `Round ${n}`,
     clickWinner: "click the winner",
     match: (n) => `Match ${n}`,
     saving: "Saving…",
@@ -430,7 +417,6 @@ export const en: Translations = {
     participantsSection: "Participants",
     winnerError: "Failed to save winner",
     kickError: "Failed to kick",
-    backLabel: "Home",
   },
   results: {
     yourScore: "Your score",
@@ -457,9 +443,6 @@ export const en: Translations = {
   bracketView: {
     final: "Final",
     round: (n) => `Round ${n}`,
-  },
-  pageSpinner: {
-    loading: "Loading…",
   },
 };
 
