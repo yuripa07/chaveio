@@ -11,11 +11,12 @@ type LobbyCTAProps = {
   code: string;
   participants: Participant[];
   isCreator: boolean;
+  hasSubmittedPicks: boolean;
   starting: boolean;
   onStart: () => void;
 };
 
-export function LobbyCTA({ code, participants, isCreator, starting, onStart }: LobbyCTAProps) {
+export function LobbyCTA({ code, participants, isCreator, hasSubmittedPicks, starting, onStart }: LobbyCTAProps) {
   const allReady = participants.every((participant) => participant.hasSubmittedPicks);
   const notReadyParticipants = participants.filter((participant) => !participant.hasSubmittedPicks);
   const readyCount = participants.filter((p) => p.hasSubmittedPicks).length;
@@ -27,7 +28,7 @@ export function LobbyCTA({ code, participants, isCreator, starting, onStart }: L
         className={cn("flex items-center justify-center gap-2", PRIMARY_BUTTON_CLASS)}
       >
         <ClipboardList className="h-4 w-4" />
-        Fazer palpites
+        {hasSubmittedPicks ? "Editar palpites" : "Fazer palpites"}
       </Link>
 
       {isCreator && (

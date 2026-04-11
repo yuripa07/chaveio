@@ -19,7 +19,7 @@ import type { Participant, TournamentState } from "@/types/tournament";
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, tokenReady, isCreator, setTokenFromResponse, clearToken } = useTournamentToken(code);
+  const { token, tokenReady, participantId, isCreator, setTokenFromResponse, clearToken } = useTournamentToken(code);
 
   const [tournamentData, setTournamentData] = useState<TournamentState | null>(null);
   const [joinName, setJoinName] = useState("");
@@ -347,6 +347,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               code={code}
               participants={participants}
               isCreator={isCreator}
+              hasSubmittedPicks={participants.find((p) => p.id === participantId)?.hasSubmittedPicks ?? false}
               starting={starting}
               onStart={handleStart}
             />
