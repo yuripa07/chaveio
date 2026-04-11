@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BarChart2, Clock, Swords, Trophy, AlertTriangle, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { useRequireParticipant } from "@/hooks/use-require-participant";
+import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, RoundStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
@@ -28,6 +29,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   const router = useRouter();
   const { token, clearToken } = useTournamentToken(code);
   const auth = useRequireParticipant(code, { requireCreator: true });
+  const { t } = useLocale();
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [rankings, setRankings] = useState<RankEntry[]>([]);
@@ -84,7 +86,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setWinnerError(body.error ?? "Erro ao salvar vencedor");
+        setWinnerError(body.error ?? t.live.winnerError);
         return;
       }
       const result = await loadState(token);
@@ -110,7 +112,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        setKickError((await res.json()).error ?? "Erro ao expulsar");
+        setKickError((await res.json()).error ?? t.live.kickError);
         return;
       }
       setKickTarget(null);
@@ -120,7 +122,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         setRankings(result.rankings);
       }
     } catch {
-      setKickError("Erro de rede");
+      setKickError(t.common.networkError);
     } finally {
       setKicking(false);
     }
@@ -144,14 +146,14 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         code={code}
         name={state.tournament.name}
         backHref="/"
-        backLabel="Início"
+        backLabel={t.common.home}
         rightSlot={
           <Link
             href={`/tournament/${code}/results`}
             className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors shadow-sm"
           >
             <BarChart2 className="h-3.5 w-3.5" />
-            Placar
+            {t.live.score}
           </Link>
         }
       />
@@ -176,30 +178,28 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
               </div>
               <button
                 onClick={() => setPendingWinner(null)}
-                aria-label="Fechar"
+                aria-label={t.common.close}
                 className="text-zinc-400 hover:text-zinc-600 transition-colors"
               >
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
-            <h2 id="confirm-winner-title" className="text-base font-bold text-zinc-900">Confirmar vencedor</h2>
+            <h2 id="confirm-winner-title" className="text-base font-bold text-zinc-900">{t.live.confirmWinner}</h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Tem certeza que{" "}
-              <strong className="text-zinc-800">{pendingWinner.item.name}</strong> ganhou essa partida?
-              Essa ação não pode ser desfeita.
+              {t.live.confirmWinnerText(pendingWinner.item.name)}
             </p>
             <div className="mt-5 flex gap-2">
               <button
                 onClick={() => setPendingWinner(null)}
                 className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors"
               >
-                Cancelar
+                {t.common.cancel}
               </button>
               <button
                 onClick={confirmWinner}
                 className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[.98] transition"
               >
-                Confirmar
+                {t.common.confirm}
               </button>
             </div>
           </div>
@@ -212,9 +212,9 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
           <InfoBanner variant="warning">
             <Clock className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              Aguardando palpites de:{" "}
+              {t.live.waitingPicksFrom}{" "}
               <strong>{pendingParticipants.map((p) => p.displayName).join(", ")}</strong>.
-              {" "}Os vencedores não podem ser definidos até que todos enviem seus palpites.
+              {" "}{t.live.picksRequired}
             </span>
           </InfoBanner>
         )}
@@ -233,11 +233,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
               <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500">
                 {activeRound.name
                   ? `${activeRound.name} · ${activeRound.pointValue} pts`
-                  : `Rodada ${activeRound.roundNumber} · ${activeRound.pointValue} pts`
+                  : `${t.bracketView.round(activeRound.roundNumber)} · ${activeRound.pointValue} pts`
                 }
               </h2>
               <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">
-                clique no vencedor
+                {t.live.clickWinner}
               </span>
             </div>
 
@@ -256,12 +256,12 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                     <div className="flex items-center gap-2 border-b border-zinc-100 px-4 py-2">
                       <Swords className="h-3.5 w-3.5 text-zinc-300" />
                       <p className="text-xs font-semibold text-zinc-400">
-                        Partida {match.matchNumber}
+                        {t.live.match(match.matchNumber)}
                       </p>
                       {isBusy && (
                         <span className="ml-auto flex items-center gap-1.5 text-xs text-zinc-400">
                           <Spinner size="sm" />
-                          Salvando…
+                          {t.live.saving}
                         </span>
                       )}
                     </div>
@@ -270,7 +270,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                         if (!item)
                           return (
                             <div key={index} className="flex flex-1 items-center justify-center py-6 text-xs text-zinc-300">
-                              A definir
+                              {t.live.toBeDefined}
                             </div>
                           );
                         return (
@@ -301,7 +301,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         )}
 
         <section className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Chaveamento</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.live.bracketSection}</h2>
           <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
             <BracketView rounds={state.rounds} itemMap={itemMap} mode="view" />
           </div>
@@ -309,14 +309,14 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
         {rankings.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking atual</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.live.rankingSection}</h2>
             <RankingsTable rankings={rankings} />
           </section>
         )}
 
         {auth.isCreator && (
           <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Participantes</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.live.participantsSection}</h2>
             <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
               <ul className="divide-y divide-zinc-50">
                 {state.participants.map((participant) => (
@@ -327,7 +327,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                     <span className="flex-1 text-sm font-medium text-zinc-800">{participant.displayName}</span>
                     {participant.isCreator && (
                       <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xxs font-semibold text-indigo-600">
-                        criador
+                        {t.common.creator}
                       </span>
                     )}
                     {!participant.isCreator && (
@@ -335,7 +335,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                         type="button"
                         onClick={() => { setKickTarget(participant); setKickError(""); }}
                         className="rounded-md p-0.5 text-zinc-300 hover:bg-red-50 hover:text-red-400 transition-colors"
-                        aria-label={`Expulsar ${participant.displayName}`}
+                        aria-label={t.common.kickParticipantAria(participant.displayName)}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -351,9 +351,9 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       {kickTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-base font-bold">Expulsar participante</h2>
+            <h2 className="text-base font-bold">{t.common.kickTitle}</h2>
             <p className="text-sm text-zinc-600">
-              Tem certeza que deseja expulsar <strong>{kickTarget.displayName}</strong>? Esta ação não pode ser desfeita.
+              {t.common.kickConfirm(kickTarget.displayName)}
             </p>
             {kickError && (
               <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-600">{kickError}</p>
@@ -365,7 +365,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                 disabled={kicking}
                 className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40"
               >
-                Cancelar
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -374,7 +374,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                 className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
               >
                 {kicking && <Spinner size="sm" />}
-                Expulsar
+                {t.common.kick}
               </button>
             </div>
           </div>
