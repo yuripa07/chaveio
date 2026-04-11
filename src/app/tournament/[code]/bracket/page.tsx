@@ -346,12 +346,12 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                     {submitting ? (
                       <>
                         <Spinner size="sm" />
-                        Enviando…
+                        {alreadySubmitted ? "Salvando…" : "Enviando…"}
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        Enviar palpites
+                        {alreadySubmitted ? "Editar palpites" : "Enviar palpites"}
                       </>
                     )}
                   </button>

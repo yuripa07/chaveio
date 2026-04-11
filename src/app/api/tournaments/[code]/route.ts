@@ -37,11 +37,11 @@ export async function GET(
   });
 
   if (!tournament) {
-    return Response.json({ error: "Tournament not found" }, { status: 404 });
+    return Response.json({ error: "Torneio não encontrado" }, { status: 404 });
   }
 
   if (tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
+    return Response.json({ error: "Acesso negado" }, { status: 403 });
   }
 
   const isStillParticipant = tournament.participants.some(

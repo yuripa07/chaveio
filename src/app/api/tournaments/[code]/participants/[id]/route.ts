@@ -17,7 +17,7 @@ export async function DELETE(
   });
 
   if (!tournament || tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Tournament not found" }, { status: 404 });
+    return Response.json({ error: "Torneio não encontrado" }, { status: 404 });
   }
 
   const participant = await prisma.participant.findUnique({
@@ -25,11 +25,11 @@ export async function DELETE(
   });
 
   if (!participant || participant.tournamentId !== tournament.id) {
-    return Response.json({ error: "Participant not found" }, { status: 404 });
+    return Response.json({ error: "Participante não encontrado" }, { status: 404 });
   }
 
   if (participant.isCreator) {
-    return Response.json({ error: "Cannot kick the tournament creator" }, { status: 400 });
+    return Response.json({ error: "Não é possível expulsar o criador do torneio" }, { status: 400 });
   }
 
   await prisma.participant.delete({ where: { id } });
