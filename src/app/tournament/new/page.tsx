@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, Users, Tag, User, Lock, CheckCircle2, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { Trophy, LayoutList, Tag, User, Lock, CheckCircle2, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { setStoredToken } from "@/lib/token-storage";
 import { cn } from "@/lib/cn";
 import { INPUT_CLASS } from "@/constants/styles";
@@ -138,8 +138,8 @@ export default function NewTournament() {
 
             <div className="space-y-2">
               <label className="flex items-center gap-1.5 text-sm font-medium text-zinc-700">
-                <Users className="h-3.5 w-3.5 text-zinc-400" />
-                Participantes {countLabel}
+                <LayoutList className="h-3.5 w-3.5 text-zinc-400" />
+                Candidatos {countLabel}
               </label>
               <p className="text-xs text-zinc-400">
                 Deve ter 4, 8, 16 ou 32 itens. Pressione Enter para avançar, Backspace para remover.
