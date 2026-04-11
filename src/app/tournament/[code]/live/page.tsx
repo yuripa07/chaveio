@@ -25,7 +25,7 @@ type PendingWinner = { matchId: string; item: TournamentItem };
 export default function LivePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, isCreator } = useTournamentToken(code);
+  const { token, tokenReady, isCreator, clearToken } = useTournamentToken(code);
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [rankings, setRankings] = useState<RankEntry[]>([]);
@@ -43,12 +43,17 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` } }),
       fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` } }),
     ]);
+    if (tournamentRes.status === 401 || tournamentRes.status === 403) {
+      clearToken();
+      return null;
+    }
     if (!tournamentRes.ok) return null;
     const rankingsData: RankEntry[] = rankingsRes.ok ? (await rankingsRes.json()).rankings ?? [] : [];
     return { state: (await tournamentRes.json()) as TournamentState, rankings: rankingsData };
-  }, [code]);
+  }, [code, clearToken]);
 
   useEffect(() => {
+    if (!tokenReady) return;
     if (!token) { router.replace(`/tournament/${code}`); return; }
     if (!isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
     loadState(token).then((result) => {
@@ -60,7 +65,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setState(result.state);
       setRankings(result.rankings);
     });
-  }, [token, isCreator, code, loadState, router]);
+  }, [token, tokenReady, isCreator, code, loadState, router]);
 
   async function confirmWinner() {
     if (!token || !pendingWinner) return;

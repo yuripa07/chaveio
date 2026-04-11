@@ -19,7 +19,7 @@ import type { Participant, TournamentState } from "@/types/tournament";
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, isCreator, setTokenFromResponse } = useTournamentToken(code);
+  const { token, tokenReady, isCreator, setTokenFromResponse, clearToken } = useTournamentToken(code);
 
   const [tournamentData, setTournamentData] = useState<TournamentState | null>(null);
   const [joinName, setJoinName] = useState("");
@@ -38,9 +38,13 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       headers: { Authorization: `Bearer ${authToken}` },
       signal,
     });
+    if (response.status === 401 || response.status === 403) {
+      clearToken();
+      return null;
+    }
     if (!response.ok) return null;
     return (await response.json()) as TournamentState;
-  }, [code]);
+  }, [code, clearToken]);
 
   function redirectByStatus(status: string, creator: boolean) {
     if (status === TournamentStatus.ACTIVE)
@@ -141,6 +145,8 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       setKicking(false);
     }
   }
+
+  if (!tokenReady) return <LobbyPageSkeleton />;
 
   if (!token) {
     return (

@@ -15,3 +15,9 @@ export function setStoredToken(code: string, token: string): void {
     // Silently fail — app still works via API
   }
 }
+
+export function clearStoredToken(code: string): void {
+  try {
+    localStorage.removeItem(`${KEY_PREFIX}${code}`);
+  } catch {}
+}

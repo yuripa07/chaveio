@@ -30,7 +30,7 @@ type BracketPageState = TournamentState & { myPicks: Record<string, string> };
 export default function BracketPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, participantId, isCreator } = useTournamentToken(code);
+  const { token, tokenReady, participantId, isCreator, clearToken } = useTournamentToken(code);
 
   const [state, setState] = useState<BracketPageState | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
@@ -52,6 +52,10 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
         fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
       ]);
+      if (tournamentRes.status === 401 || tournamentRes.status === 403) {
+        clearToken();
+        return null;
+      }
       if (!tournamentRes.ok) return null;
       const tournamentData = await tournamentRes.json();
       const myPicks: Record<string, string> = {};
@@ -62,7 +66,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       }
       return { ...tournamentData, myPicks } as BracketPageState;
     },
-    [code]
+    [code, clearToken]
   );
 
   // Initialize localItems once when state first loads (polling must not overwrite after a drag).
@@ -122,6 +126,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   }
 
   useEffect(() => {
+    if (!tokenReady) return;
     if (!token) { router.replace(`/tournament/${code}`); return; }
     loadState(token).then((newState) => {
       if (!newState) return;
@@ -132,7 +137,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       setState(newState);
       setPicks(newState.myPicks);
     });
-  }, [token, code, loadState, router]);
+  }, [token, tokenReady, code, loadState, router]);
 
   usePolling(
     async (signal) => {
