@@ -6,6 +6,7 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { BRACKET_ITEM_HEIGHT } from "@/constants/bracket-layout";
 import { ResultIcon } from "@/components/result-icon";
+import { useLocale } from "@/contexts/locale-context";
 import type { TournamentItem } from "@/types/tournament";
 
 interface Props {
@@ -29,6 +30,7 @@ export function ReorderableSlotItem({
   isDraggingThis,
   onPick,
 }: Props) {
+  const { t } = useLocale();
   const { setNodeRef: setDragRef, listeners, attributes } = useDraggable({ id: item.id });
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: item.id });
 
@@ -63,7 +65,7 @@ export function ReorderableSlotItem({
         {...attributes}
         {...listeners}
         className="cursor-grab touch-none text-zinc-300 hover:text-zinc-500 active:cursor-grabbing shrink-0"
-        aria-label="Arrastar para trocar seed"
+        aria-label={t.bracket.dragToReorder}
         onClick={(e) => e.stopPropagation()}
       >
         <GripVertical className="h-3.5 w-3.5" />
