@@ -12,7 +12,7 @@ export function BackLink({ href, label = "Voltar", className }: BackLinkProps) {
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors",
+        "inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors",
         className
       )}
     >

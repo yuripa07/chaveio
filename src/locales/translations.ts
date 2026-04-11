@@ -20,6 +20,12 @@ export interface Translations {
     kickParticipantAria: (name: string) => string;
     creator: string;
   };
+  theme: {
+    toggleAria: string;
+    light: string;
+    dark: string;
+    system: string;
+  };
   landing: {
     tagline: string;
     createTournament: string;
@@ -169,6 +175,12 @@ export const ptBR: Translations = {
     kickConfirm: (name) => `Tem certeza que deseja expulsar ${name}? Esta ação não pode ser desfeita.`,
     kickParticipantAria: (name) => `Expulsar ${name}`,
     creator: "criador",
+  },
+  theme: {
+    toggleAria: "Alternar tema",
+    light: "Claro",
+    dark: "Escuro",
+    system: "Sistema",
   },
   landing: {
     tagline: "Palpites de chaveamento para sua equipe",
@@ -350,6 +362,12 @@ export const en: Translations = {
     kickConfirm: (name) => `Are you sure you want to kick ${name}? This action cannot be undone.`,
     kickParticipantAria: (name) => `Kick ${name}`,
     creator: "creator",
+  },
+  theme: {
+    toggleAria: "Toggle theme",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
   },
   landing: {
     tagline: "Bracket predictions for your team",

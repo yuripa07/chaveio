@@ -65,7 +65,7 @@ export function LobbyCTA({ code, participants, isCreator, hasSubmittedPicks, sta
             )}
           </button>
           {allReady && participants.length >= 2 && (
-            <p className="text-center text-xs text-emerald-600 font-medium">
+            <p className="text-center text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               {t.lobbyCTA.allReady}
             </p>
           )}

@@ -89,6 +89,9 @@ src/
 │   ├── points.ts            # computeRoundPoints, computeMaxPoints
 │   ├── token-client.ts      # decodeTokenPayload (client-side, no verify)
 │   └── token-storage.ts     # getStoredToken, setStoredToken (try-catch wrappers)
+├── contexts/
+│   ├── locale-context.tsx    # LocaleProvider, useLocale() — i18n context
+│   └── theme-context.tsx     # ThemeProvider, useTheme() — light/dark/system theme
 ├── hooks/
 │   ├── use-polling.ts        # usePolling() — interval + AbortController cleanup
 │   ├── use-require-participant.ts # useRequireParticipant() — auth guard hook for protected pages
@@ -110,7 +113,8 @@ src/
 │   ├── participant-avatar.tsx  # Circular avatar with participant initial (indigo theme)
 │   ├── section-header.tsx     # Icon + uppercase label + optional count (text-xxs, used in lobby)
 │   ├── spinner.tsx           # Inline spinner (sm/md/lg)
-│   └── tournament-header.tsx # Sticky header with code/name/back
+│   ├── tournament-header.tsx # Sticky header with code/name/back
+│   └── locale-switcher.tsx   # Fixed bottom-right pill: theme toggle (Sun/Moon/Monitor) + locale buttons (PT/EN)
 ├── constants/
 │   ├── auth.ts               # JWT_EXPIRY = "30d"
 │   ├── bracket-layout.ts     # SVG dimensions (BRACKET_BASE_HEIGHT, COLUMN_WIDTH, etc.)
@@ -260,6 +264,7 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 11. **Derive state during render** — don't use useEffect to sync derived state
 12. **Shared bracket logic** — `augmentRounds()`, `clearDownstream()` in `lib/bracket-client.ts`
 13. **i18n** — never hardcode UI strings; always use `useLocale()` + `t.*`; see `docs/i18n.md`
+14. **Dark mode** — all new UI must include `dark:` variants; use `ThemeProvider`/`useTheme()` from `src/contexts/theme-context.tsx`; color mapping: `bg-white→dark:bg-zinc-900`, `bg-zinc-50→dark:bg-zinc-950`, `bg-zinc-100→dark:bg-zinc-800`, `text-zinc-900→dark:text-zinc-50`, `border-zinc-100→dark:border-zinc-800`
 
 ### Backend Patterns (see `docs/backend-conventions.md`)
 1. **`handleRequest()` helper** — `lib/api-utils.ts` handles auth + body parsing with consistent errors

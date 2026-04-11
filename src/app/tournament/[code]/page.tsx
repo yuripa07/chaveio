@@ -157,19 +157,19 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
   if (!token) {
     return (
-      <main className="flex min-h-screen flex-col bg-zinc-50">
-        <div className="border-b border-zinc-100 bg-white px-6 py-4">
+      <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+        <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
           <BackLink href="/" label={t.common.home} />
         </div>
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
             <div className="text-center">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 font-mono text-sm font-bold tracking-widest text-zinc-600 shadow-sm">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-1.5 font-mono text-sm font-bold tracking-widest text-zinc-600 dark:text-zinc-300 shadow-sm">
                 <Hash className="h-3.5 w-3.5 text-zinc-400" />
                 {code}
               </div>
               <h1 className="text-2xl font-extrabold tracking-tight">{t.lobby.joinTitle}</h1>
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 {t.lobby.joinSubtitle}
               </p>
             </div>
@@ -205,7 +205,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                   aria-label={showPassword ? t.common.hidePassword : t.common.showPassword}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -243,10 +243,10 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const { tournament, participants, items } = tournamentData;
 
   return (
-    <main className="flex min-h-screen flex-col bg-zinc-50">
-      <div className="border-b border-zinc-100 bg-white px-6 py-4">
+    <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
+          <Link href="/" className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
             <ChevronLeft className="h-4 w-4" />
             {t.common.home}
           </Link>
@@ -262,28 +262,28 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">{tournament.name}</h1>
-              {tournament.theme && <p className="mt-0.5 text-sm text-zinc-500">{tournament.theme}</p>}
+              {tournament.theme && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{tournament.theme}</p>}
             </div>
-            <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+            <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-950 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
               {t.lobby.waitingRoom}
             </span>
           </div>
 
-          <div className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-white px-5 py-3 shadow-sm">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+          <div className="flex items-center gap-3 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-3 shadow-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950">
               <Hash className="h-4 w-4 text-indigo-500" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xxs font-semibold uppercase tracking-wider text-zinc-400">{t.lobby.tournamentCode}</p>
-              <p className="font-mono text-lg font-bold tracking-widest text-zinc-800">{code}</p>
+              <p className="font-mono text-lg font-bold tracking-widest text-zinc-800 dark:text-zinc-200">{code}</p>
             </div>
             <button
               onClick={handleCopyCode}
               className={cn(
                 "flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all",
                 copied
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                  ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
+                  : "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
               )}
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -292,7 +292,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
               <SectionHeader
                 icon={<User className="h-3.5 w-3.5" />}
                 label={t.lobby.participantsSection}
@@ -305,20 +305,20 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                     <span className="flex-1 text-sm font-medium">{participant.displayName}</span>
                     <div className="flex items-center gap-1.5">
                       {participant.isCreator && (
-                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xxs font-semibold text-indigo-600">
+                        <span className="rounded-full bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 text-xxs font-semibold text-indigo-600 dark:text-indigo-400">
                           {t.common.creator}
                         </span>
                       )}
                       {participant.hasSubmittedPicks ? (
                         <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-label="Palpites enviados" />
                       ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-zinc-200" aria-label="Palpites pendentes" />
+                        <div className="h-4 w-4 rounded-full border-2 border-zinc-200 dark:border-zinc-700" aria-label="Palpites pendentes" />
                       )}
                       {isCreator && !participant.isCreator && (
                         <button
                           type="button"
                           onClick={() => { setKickTarget(participant); setKickError(""); }}
-                          className="rounded-md p-0.5 text-zinc-300 hover:bg-red-50 hover:text-red-400 transition-colors"
+                          className="rounded-md p-0.5 text-zinc-300 dark:text-zinc-600 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-400 transition-colors"
                           aria-label={t.common.kickParticipantAria(participant.displayName)}
                         >
                           <X className="h-3.5 w-3.5" />
@@ -330,7 +330,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
               <SectionHeader
                 icon={<Trophy className="h-3.5 w-3.5" />}
                 label={t.lobby.bracketSection}
@@ -339,10 +339,10 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               <ul className="space-y-1.5">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-center gap-2 text-sm">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-xxs font-bold text-zinc-500 dark:text-zinc-400">
                       {item.seed}
                     </span>
-                    <span className="text-zinc-700">{item.name}</span>
+                    <span className="text-zinc-700 dark:text-zinc-300">{item.name}</span>
                   </li>
                 ))}
               </ul>

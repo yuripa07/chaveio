@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import type { TournamentState, PickResult, RankEntry, ItemMap } from "@/types/tournament";
 
 const BracketView = dynamic(() => import("@/components/bracket-view"), {
-  loading: () => <div className="h-64 motion-safe:animate-pulse rounded-2xl bg-zinc-100" />,
+  loading: () => <div className="h-64 motion-safe:animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-800" />,
 });
 
 export default function ResultsPage({ params }: { params: Promise<{ code: string }> }) {
@@ -96,18 +96,18 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
   const isFinished = state.tournament.status === TournamentStatus.FINISHED;
 
   const statusBadge = isFinished ? (
-    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+    <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
       {t.results.finished}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-950 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
       <PulseDot color="amber" size="sm" />
       {t.results.inProgress}
     </span>
   );
 
   return (
-    <main className="flex min-h-screen flex-col bg-zinc-50">
+    <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
       <TournamentHeader
         code={code}
         name={state.tournament.name}
@@ -122,13 +122,13 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-8">
 
-        <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 px-6 py-6 text-white">
             <p className="text-xs font-semibold uppercase tracking-wider opacity-75">{t.results.yourScore}</p>
             <p className="mt-1 text-5xl font-black tracking-tight">{myTotalPoints}</p>
             <p className="mt-0.5 text-sm font-medium opacity-75">{t.results.points}</p>
           </div>
-          <div className="flex divide-x divide-zinc-100">
+          <div className="flex divide-x divide-zinc-100 dark:divide-zinc-800">
             <ScoreStat label={t.results.correct} value={correctCount} />
             <ScoreStat label={t.results.played} value={resolvedCount} />
             <ScoreStat label={t.results.waiting} value={myPicks.length - resolvedCount} />
@@ -162,10 +162,10 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                         className={cn(
                           "flex items-center gap-3 rounded-xl border px-4 py-3",
                           isCorrect === true
-                            ? "border-emerald-200 bg-emerald-50"
+                            ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950"
                             : isCorrect === false
-                            ? "border-red-100 bg-red-50"
-                            : "border-zinc-100 bg-white"
+                            ? "border-red-100 dark:border-red-900 bg-red-50 dark:bg-red-950"
+                            : "border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900"
                         )}
                       >
                         <ResultIcon result={resultType} />
@@ -174,7 +174,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                             <span className="text-xxs font-bold text-zinc-400">
                               {round.name || `R${round.roundNumber}`}
                             </span>
-                            <span className="font-semibold text-zinc-800 truncate">
+                            <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">
                               {winner?.name ?? "?"}
                             </span>
                             <span className="text-zinc-400">{t.results.won}</span>
@@ -182,7 +182,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                           {myItem && (
                             <p className="mt-0.5 text-xs text-zinc-400">
                               {t.results.youChose}{" "}
-                              <span className={isCorrect ? "font-semibold text-emerald-600" : "text-red-400"}>
+                              <span className={isCorrect ? "font-semibold text-emerald-600 dark:text-emerald-400" : "text-red-400"}>
                                 {myItem.name}
                               </span>
                             </p>
@@ -192,7 +192,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
                           <span
                             className={cn(
                               "shrink-0 rounded-lg px-2.5 py-1 text-sm font-bold",
-                              isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-400"
+                              isCorrect ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400"
                             )}
                           >
                             {isCorrect ? `+${myPick.pointsEarned}` : "0"}
@@ -209,7 +209,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         {state.rounds.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t.results.bracketSection}</h2>
-            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm overflow-hidden">
               <BracketView
                 rounds={state.rounds}
                 itemMap={itemMap}

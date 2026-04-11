@@ -58,23 +58,23 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 to-white px-6 py-24">
+      <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-6 py-24">
         <div className="w-full max-w-sm space-y-10 text-center">
 
           <div className="flex flex-col items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-none">
               <Trophy className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900">Chaveio</h1>
-              <p className="mt-1.5 text-base text-zinc-500">{t.landing.tagline}</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">Chaveio</h1>
+              <p className="mt-1.5 text-base text-zinc-500 dark:text-zinc-400">{t.landing.tagline}</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <Link
               href="/tournament/new"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition"
             >
               <PlusCircle className="h-4 w-4" />
               {t.landing.createTournament}
@@ -82,10 +82,10 @@ export default function Home() {
 
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-100" />
+                <div className="w-full border-t border-zinc-100 dark:border-zinc-800" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-gradient-to-b from-indigo-50 to-white px-3 text-xs text-zinc-400">
+                <span className="bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-3 text-xs text-zinc-400 dark:text-zinc-500">
                   {t.landing.orEnterCode}
                 </span>
               </div>
@@ -104,16 +104,16 @@ export default function Home() {
                     autoComplete="off"
                     inputMode="text"
                     className={cn(
-                      "w-full rounded-2xl border bg-white px-5 py-3.5 text-center text-xl font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:text-zinc-300 focus:outline-none focus:ring-2 transition",
+                      "w-full rounded-2xl border bg-white dark:bg-zinc-800 px-5 py-3.5 text-center text-xl font-mono font-bold tracking-widest uppercase placeholder:font-normal placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 transition",
                       codeComplete
-                        ? "border-emerald-300 focus:ring-emerald-400 text-emerald-700"
+                        ? "border-emerald-300 dark:border-emerald-700 focus:ring-emerald-400 text-emerald-700 dark:text-emerald-400"
                         : codeError
-                        ? "border-red-300 focus:ring-red-400 text-zinc-900"
-                        : "border-zinc-200 focus:border-transparent focus:ring-indigo-500 text-zinc-900"
+                        ? "border-red-300 dark:border-red-700 focus:ring-red-400 text-zinc-900 dark:text-zinc-100"
+                        : "border-zinc-200 dark:border-zinc-700 focus:border-transparent focus:ring-indigo-500 text-zinc-900 dark:text-zinc-100"
                     )}
                   />
                   {code.length > 0 && !codeComplete && !codeError && (
-                    <div className="absolute bottom-0 left-4 right-4 h-0.5 overflow-hidden rounded-full bg-zinc-100">
+                    <div className="absolute bottom-0 left-4 right-4 h-0.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-700">
                       <div
                         className="h-full bg-indigo-400 transition-[width] duration-200"
                         style={{ width: `${codeProgress * 100}%` }}
@@ -123,12 +123,12 @@ export default function Home() {
                 </div>
 
                 {codeError ? (
-                  <div className="flex items-start gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+                  <div className="flex items-start gap-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                     <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     <span>{codeError}</span>
                   </div>
                 ) : codeHint ? (
-                  <div className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  <div className="flex items-start gap-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                     <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     <span>{codeHint}</span>
                   </div>
@@ -137,7 +137,7 @@ export default function Home() {
                     {t.landing.codeProgress(code.length, TOURNAMENT_CODE_LENGTH)}
                   </p>
                 ) : codeComplete ? (
-                  <p className="text-center text-xs font-medium text-emerald-600">
+                  <p className="text-center text-xs font-medium text-emerald-600 dark:text-emerald-400">
                     {t.landing.codeComplete}
                   </p>
                 ) : null}
@@ -146,7 +146,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={joining || !codeComplete}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 active:scale-[.98] transition disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[.98] transition disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {joining ? (
                   <>

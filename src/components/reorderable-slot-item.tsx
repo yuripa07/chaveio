@@ -51,20 +51,20 @@ export function ReorderableSlotItem({
       onClick={() => isPickable && onPick?.()}
       className={cn(
         "flex w-full items-center gap-2 px-3 text-left text-sm transition-colors",
-        !isFirstSlot && "border-t border-zinc-100",
+        !isFirstSlot && "border-t border-zinc-100 dark:border-zinc-800",
         isDraggingThis && "opacity-40",
         isOver && !isDraggingThis && "ring-2 ring-inset ring-indigo-400",
-        isWinner && "bg-emerald-50 text-emerald-700",
-        isLoser && "bg-white text-zinc-300",
+        isWinner && "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400",
+        isLoser && "bg-white dark:bg-zinc-900 text-zinc-300 dark:text-zinc-600",
         isSelected && "bg-indigo-600 text-white",
-        !isWinner && !isLoser && !isSelected && isPickable && "hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer",
-        !isWinner && !isLoser && !isSelected && !isPickable && "bg-white text-zinc-700"
+        !isWinner && !isLoser && !isSelected && isPickable && "hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer",
+        !isWinner && !isLoser && !isSelected && !isPickable && "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
       )}
     >
       <span
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none text-zinc-300 hover:text-zinc-500 active:cursor-grabbing shrink-0"
+        className="cursor-grab touch-none text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400 active:cursor-grabbing shrink-0"
         aria-label={t.bracket.dragToReorder}
         onClick={(e) => e.stopPropagation()}
       >
@@ -73,7 +73,7 @@ export function ReorderableSlotItem({
       <span
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold",
-          isWinner ? "bg-emerald-100 text-emerald-600" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 text-zinc-400"
+          isWinner ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
         )}
       >
         {item.seed}

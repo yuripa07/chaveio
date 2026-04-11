@@ -31,15 +31,15 @@ export function SortableBracketItem({ item, index }: Props) {
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none text-zinc-300 hover:text-zinc-500 active:cursor-grabbing"
+        className="cursor-grab touch-none text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400 active:cursor-grabbing"
         aria-label="Arrastar para reordenar"
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-xxs font-bold text-zinc-500 dark:text-zinc-400">
         {index + 1}
       </span>
-      <span className="text-zinc-700">{item.name}</span>
+      <span className="text-zinc-700 dark:text-zinc-300">{item.name}</span>
     </li>
   );
 }

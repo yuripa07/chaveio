@@ -20,7 +20,7 @@ export function TournamentHeader({
   maxWidth = "5xl",
 }: TournamentHeaderProps) {
   return (
-    <div className="border-b border-zinc-100 bg-white px-6 py-4">
+    <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
       <div
         className={cn(
           "mx-auto flex items-center gap-3",
@@ -32,12 +32,12 @@ export function TournamentHeader({
           <>
             <Link
               href={backHref}
-              className="flex shrink-0 items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+              className="flex shrink-0 items-center gap-1 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">{backLabel}</span>
             </Link>
-            <div className="h-5 w-px shrink-0 bg-zinc-200" />
+            <div className="h-5 w-px shrink-0 bg-zinc-200 dark:bg-zinc-700" />
           </>
         )}
 
@@ -46,7 +46,7 @@ export function TournamentHeader({
           <span className="font-mono text-xs font-semibold tracking-widest text-zinc-400">
             {code}
           </span>
-          <h1 className="truncate text-base font-extrabold leading-tight tracking-tight">
+          <h1 className="truncate text-base font-extrabold leading-tight tracking-tight dark:text-zinc-50">
             {name}
           </h1>
         </div>

@@ -242,10 +242,10 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     <span className={cn(
       "rounded-full px-3 py-1 text-xs font-semibold ring-1",
       viewOnly
-        ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
+        ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 ring-emerald-100 dark:ring-emerald-900"
         : isLobby
-        ? "bg-amber-50 text-amber-600 ring-amber-100"
-        : "bg-indigo-50 text-indigo-600 ring-indigo-100"
+        ? "bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 ring-amber-100 dark:ring-amber-900"
+        : "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 ring-indigo-100 dark:ring-indigo-900"
     )}>
       {viewOnly
         ? t.bracket.yourPicks
@@ -256,7 +256,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   );
 
   return (
-    <main className="flex min-h-screen flex-col bg-zinc-50">
+    <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
       <TournamentHeader
         code={code}
         name={state.tournament.name}
@@ -268,12 +268,12 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       <div className="flex flex-1 flex-col px-6 py-8">
         <div className="mx-auto w-full max-w-5xl space-y-6">
           {viewOnly && (
-            <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700">
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-5 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               {t.bracket.picksSubmitted}
               <Link
                 href={`/tournament/${code}/results`}
-                className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-zinc-900 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
               >
                 <BarChart2 className="h-3.5 w-3.5" />
                 {t.bracket.viewRanking}
@@ -306,11 +306,11 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
               />
               <DragOverlay dropAnimation={null}>
                 {activeItem && (
-                  <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 shadow-lg scale-[1.02] text-sm">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
+                  <div className="flex items-center gap-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 px-3 py-2 shadow-lg scale-[1.02] text-sm">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-xxs font-bold text-zinc-500 dark:text-zinc-400">
                       {activeItem.seed}
                     </span>
-                    <span className="text-zinc-700">{activeItem.name}</span>
+                    <span className="text-zinc-700 dark:text-zinc-300">{activeItem.name}</span>
                   </div>
                 )}
               </DragOverlay>
@@ -320,17 +320,17 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
             )}
 
             {!viewOnly && (
-              <div className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm space-y-3">
+              <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-sm space-y-3">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-zinc-500">
+                    <span className="font-medium text-zinc-500 dark:text-zinc-400">
                       {t.bracket.picksProgress(pickedCount, eligibleCount)}
                     </span>
                     {allPicked && (
                       <span className="font-semibold text-emerald-600">{t.bracket.allFilled}</span>
                     )}
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-300",
@@ -345,7 +345,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                   <button
                     type="submit"
                     disabled={submitting || !allPicked}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {submitting ? (
                       <>
@@ -365,7 +365,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                     </span>
                   )}
                   {saved && (
-                    <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="h-4 w-4" />
                       {t.bracket.picksSaved}
                     </span>
