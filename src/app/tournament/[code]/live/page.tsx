@@ -14,7 +14,7 @@ import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
 import { Spinner } from "@/components/spinner";
 import dynamic from "next/dynamic";
-import type { TournamentState, ItemMap, RankEntry, TournamentItem } from "@/types/tournament";
+import type { TournamentState, ItemMap, RankEntry, TournamentItem, Participant } from "@/types/tournament";
 
 const BracketView = dynamic(() => import("@/components/bracket-view"), {
   loading: () => <div className="h-64 motion-safe:animate-pulse rounded-2xl bg-zinc-100" />,
@@ -25,13 +25,16 @@ type PendingWinner = { matchId: string; item: TournamentItem };
 export default function LivePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, isCreator } = useTournamentToken(code);
+  const { token, tokenReady, isCreator, clearToken } = useTournamentToken(code);
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [resolving, setResolving] = useState<string | null>(null);
   const [winnerError, setWinnerError] = useState("");
   const [pendingWinner, setPendingWinner] = useState<PendingWinner | null>(null);
+  const [kickTarget, setKickTarget] = useState<Participant | null>(null);
+  const [kicking, setKicking] = useState(false);
+  const [kickError, setKickError] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,12 +46,17 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` } }),
       fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` } }),
     ]);
+    if (tournamentRes.status === 401 || tournamentRes.status === 403) {
+      clearToken();
+      return null;
+    }
     if (!tournamentRes.ok) return null;
     const rankingsData: RankEntry[] = rankingsRes.ok ? (await rankingsRes.json()).rankings ?? [] : [];
     return { state: (await tournamentRes.json()) as TournamentState, rankings: rankingsData };
-  }, [code]);
+  }, [code, clearToken]);
 
   useEffect(() => {
+    if (!tokenReady) return;
     if (!token) { router.replace(`/tournament/${code}`); return; }
     if (!isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
     loadState(token).then((result) => {
@@ -60,7 +68,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setState(result.state);
       setRankings(result.rankings);
     });
-  }, [token, isCreator, code, loadState, router]);
+  }, [token, tokenReady, isCreator, code, loadState, router]);
 
   async function confirmWinner() {
     if (!token || !pendingWinner) return;
@@ -89,6 +97,32 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setRankings(result.rankings);
     } finally {
       setResolving(null);
+    }
+  }
+
+  async function handleKick() {
+    if (!token || !kickTarget) return;
+    setKicking(true);
+    setKickError("");
+    try {
+      const res = await fetch(`/api/tournaments/${code}/participants/${kickTarget.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setKickError((await res.json()).error ?? "Erro ao expulsar");
+        return;
+      }
+      setKickTarget(null);
+      const result = await loadState(token);
+      if (result) {
+        setState(result.state);
+        setRankings(result.rankings);
+      }
+    } catch {
+      setKickError("Erro de rede");
+    } finally {
+      setKicking(false);
     }
   }
 
@@ -278,7 +312,73 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
             <RankingsTable rankings={rankings} />
           </section>
         )}
+
+        {isCreator && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Participantes</h2>
+            <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">
+              <ul className="divide-y divide-zinc-50">
+                {state.participants.map((participant) => (
+                  <li key={participant.id} className="flex items-center gap-3 px-5 py-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">
+                      {participant.displayName[0].toUpperCase()}
+                    </div>
+                    <span className="flex-1 text-sm font-medium text-zinc-800">{participant.displayName}</span>
+                    {participant.isCreator && (
+                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xxs font-semibold text-indigo-600">
+                        criador
+                      </span>
+                    )}
+                    {!participant.isCreator && (
+                      <button
+                        type="button"
+                        onClick={() => { setKickTarget(participant); setKickError(""); }}
+                        className="rounded-md p-0.5 text-zinc-300 hover:bg-red-50 hover:text-red-400 transition-colors"
+                        aria-label={`Expulsar ${participant.displayName}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
       </div>
+
+      {kickTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <h2 className="text-base font-bold">Expulsar participante</h2>
+            <p className="text-sm text-zinc-600">
+              Tem certeza que deseja expulsar <strong>{kickTarget.displayName}</strong>? Esta ação não pode ser desfeita.
+            </p>
+            {kickError && (
+              <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-600">{kickError}</p>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setKickTarget(null)}
+                disabled={kicking}
+                className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleKick}
+                disabled={kicking}
+                className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {kicking && <Spinner size="sm" />}
+                Expulsar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

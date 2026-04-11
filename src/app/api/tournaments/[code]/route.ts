@@ -44,6 +44,13 @@ export async function GET(
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const isStillParticipant = tournament.participants.some(
+    (p) => p.id === auth.payload.participantId
+  );
+  if (!isStillParticipant) {
+    return Response.json({ error: "Você não é mais um participante deste torneio" }, { status: 403 });
+  }
+
   const { items, participants, rounds, ...tournamentData } = tournament;
   return Response.json({ tournament: tournamentData, participants, items, rounds });
 }

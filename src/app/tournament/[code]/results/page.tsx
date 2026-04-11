@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
@@ -20,7 +21,8 @@ const BracketView = dynamic(() => import("@/components/bracket-view"), {
 
 export default function ResultsPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
-  const { token, participantId, isCreator } = useTournamentToken(code);
+  const router = useRouter();
+  const { token, tokenReady, participantId, isCreator, clearToken } = useTournamentToken(code);
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [myPicks, setMyPicks] = useState<PickResult[]>([]);
@@ -32,23 +34,28 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
       fetch(`/api/picks?tournamentCode=${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
       fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
     ]);
+    if (tournamentRes.status === 401 || tournamentRes.status === 403) {
+      clearToken();
+      return null;
+    }
     if (!tournamentRes.ok) return null;
     const tournamentData = (await tournamentRes.json()) as TournamentState;
     const picks: PickResult[] = picksRes.ok ? (await picksRes.json()).picks ?? [] : [];
     const rankingsData: RankEntry[] = rankingsRes.ok ? (await rankingsRes.json()).rankings ?? [] : [];
     return { tournamentData, picks, rankings: rankingsData };
-  }, [code]);
+  }, [code, clearToken]);
 
   // Initial load
   useEffect(() => {
-    if (!token) return;
+    if (!tokenReady) return;
+    if (!token) { router.replace(`/tournament/${code}`); return; }
     loadData(token).then((result) => {
       if (!result) return;
       setState(result.tournamentData);
       setMyPicks(result.picks);
       setRankings(result.rankings);
     });
-  }, [token, loadData]);
+  }, [token, tokenReady, code, loadData, router]);
 
   // Poll until finished
   usePolling(
@@ -61,7 +68,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
       setRankings(result.rankings);
     },
     POLL_INTERVAL_RESULTS,
-    !!token && state?.tournament.status !== TournamentStatus.FINISHED
+    !!token && tokenReady && state?.tournament.status !== TournamentStatus.FINISHED
   );
 
   const itemMap = useMemo(
