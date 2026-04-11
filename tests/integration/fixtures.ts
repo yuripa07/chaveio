@@ -104,6 +104,20 @@ export async function getRankings(code: string, token: string | null) {
   });
 }
 
+export async function kickParticipant(
+  code: string,
+  participantId: string,
+  token: string | null
+) {
+  const { DELETE } = await import(
+    "@/app/api/tournaments/[code]/participants/[id]/route"
+  );
+  return DELETE(
+    req("DELETE", `/api/tournaments/${code}/participants/${participantId}`, undefined, token),
+    { params: Promise.resolve({ code, id: participantId }) }
+  );
+}
+
 export async function reorderItems(
   code: string,
   token: string | null,

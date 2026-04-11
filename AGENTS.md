@@ -71,6 +71,8 @@ src/
 │           ├── rankings/route.ts         # GET leaderboard (dense ranking)
 │           ├── items/
 │           │   └── order/route.ts        # PATCH reorder items (creator, LOBBY only)
+│           ├── participants/
+│           │   └── [id]/route.ts         # DELETE kick participant (creator, any status)
 │           └── matches/[id]/
 │               └── winner/route.ts       # POST set winner (creator)
 │       └── picks/route.ts               # GET/POST picks
@@ -174,6 +176,7 @@ Header: `Authorization: Bearer <token>`
 | POST | `/api/tournaments/[code]/join` | -- | Join (password auth), return `{ token }` |
 | POST | `/api/tournaments/[code]/start` | Creator | Activate round 1, set tournament ACTIVE |
 | PATCH | `/api/tournaments/[code]/items/order` | Creator | Reorder bracket items (seeds + round-1 slots); blocked if any picks submitted |
+| DELETE | `/api/tournaments/[code]/participants/[id]` | Creator | Kick a participant (any status); their picks cascade-delete |
 | GET | `/api/tournaments/[code]/rankings` | Token | Leaderboard with dense ranking |
 | POST | `/api/tournaments/[code]/matches/[id]/winner` | Creator | Set winner, score picks, advance bracket |
 | POST | `/api/picks` | Token | Upsert all picks (atomic transaction) |

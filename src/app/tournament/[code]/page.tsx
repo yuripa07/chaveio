@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
@@ -29,6 +29,9 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [kickTarget, setKickTarget] = useState<Participant | null>(null);
+  const [kicking, setKicking] = useState(false);
+  const [kickError, setKickError] = useState("");
 
   const fetchState = useCallback(async (authToken: string, signal?: AbortSignal) => {
     const response = await fetch(`/api/tournaments/${code}`, {
@@ -111,6 +114,32 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  async function handleKick() {
+    if (!token || !kickTarget) return;
+    setKicking(true);
+    setKickError("");
+    try {
+      const res = await fetch(`/api/tournaments/${code}/participants/${kickTarget.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setKickError((await res.json()).error ?? "Erro ao expulsar");
+        return;
+      }
+      setKickTarget(null);
+      setTournamentData((prev) =>
+        prev
+          ? { ...prev, participants: prev.participants.filter((p) => p.id !== kickTarget.id) }
+          : prev
+      );
+    } catch {
+      setKickError("Erro de rede");
+    } finally {
+      setKicking(false);
+    }
   }
 
   if (!token) {
@@ -273,6 +302,16 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                       ) : (
                         <div className="h-4 w-4 rounded-full border-2 border-zinc-200" aria-label="Palpites pendentes" />
                       )}
+                      {isCreator && !participant.isCreator && (
+                        <button
+                          type="button"
+                          onClick={() => { setKickTarget(participant); setKickError(""); }}
+                          className="rounded-md p-0.5 text-zinc-300 hover:bg-red-50 hover:text-red-400 transition-colors"
+                          aria-label={`Expulsar ${participant.displayName}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -308,6 +347,37 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
           )}
         </div>
       </div>
+
+      {kickTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <h2 className="text-base font-bold">Expulsar participante</h2>
+            <p className="text-sm text-zinc-600">
+              Tem certeza que deseja expulsar <strong>{kickTarget.displayName}</strong>? Esta ação não pode ser desfeita.
+            </p>
+            {kickError && <ErrorAlert message={kickError} />}
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setKickTarget(null)}
+                disabled={kicking}
+                className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleKick}
+                disabled={kicking}
+                className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {kicking && <Spinner size="sm" />}
+                Expulsar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
