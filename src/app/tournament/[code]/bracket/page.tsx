@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, useCallback, useMemo } from "react";
+import { use, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send, CheckCircle2, BarChart2 } from "lucide-react";
@@ -13,20 +13,38 @@ import BracketView from "@/components/bracket-view";
 import { BracketPageSkeleton } from "@/components/page-spinner";
 import { TournamentHeader } from "@/components/tournament-header";
 import { Spinner } from "@/components/spinner";
-import type { TournamentState } from "@/types/tournament";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import type { TournamentItem, TournamentState } from "@/types/tournament";
 
 type BracketPageState = TournamentState & { myPicks: Record<string, string> };
 
 export default function BracketPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, participantId } = useTournamentToken(code);
+  const { token, participantId, isCreator } = useTournamentToken(code);
 
   const [state, setState] = useState<BracketPageState | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [localItems, setLocalItems] = useState<TournamentItem[]>([]);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [reorderError, setReorderError] = useState("");
+  const itemsInitialized = useRef(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const loadState = useCallback(
     async (authToken: string, signal?: AbortSignal) => {
@@ -46,6 +64,62 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     },
     [code]
   );
+
+  // Initialize localItems once when state first loads (polling must not overwrite after a drag).
+  useEffect(() => {
+    if (state?.items && !itemsInitialized.current) {
+      setLocalItems(state.items);
+      itemsInitialized.current = true;
+    }
+  }, [state?.items]);
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveItemId(event.active.id as string);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveItemId(null);
+
+    if (!over || active.id === over.id || !token) return;
+
+    const previousItems = localItems;
+    const newItems = [...localItems];
+    const i = newItems.findIndex((x) => x.id === active.id);
+    const j = newItems.findIndex((x) => x.id === over.id);
+    [newItems[i], newItems[j]] = [newItems[j], newItems[i]];
+
+    setLocalItems(newItems);
+    setReorderError("");
+
+    try {
+      const res = await fetch(`/api/tournaments/${code}/items/order`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ itemIds: newItems.map((i) => i.id) }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        setLocalItems(previousItems);
+        setReorderError(body.error ?? "Erro ao reordenar");
+      } else {
+        // Reload to sync bracket view with new round-1 pairings
+        const newState = await loadState(token);
+        if (newState) {
+          setState(newState);
+          setLocalItems(newState.items);
+          // Clear picks so the creator re-fills the bracket against the new seeding
+          setPicks({});
+        }
+      }
+    } catch {
+      setLocalItems(previousItems);
+      setReorderError("Erro de rede ao reordenar");
+    }
+  }
 
   useEffect(() => {
     if (!token) { router.replace(`/tournament/${code}`); return; }
@@ -149,6 +223,9 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   const mode = viewOnly ? "view" : "predict";
   const isLobby = state.tournament.status === TournamentStatus.LOBBY;
   const isLateJoiner = joinedAtRound !== null;
+  const hasAnyPicksSubmitted = state.participants.some((p) => p.hasSubmittedPicks);
+  const canDragReorder = isCreator && isLobby && !alreadySubmitted && !hasAnyPicksSubmitted;
+  const activeItem = activeItemId ? localItems.find((i) => i.id === activeItemId) : null;
 
   const statusBadge = (
     <span className={cn(
@@ -194,20 +271,42 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <BracketView
-              rounds={augmented}
-              itemMap={itemMap}
-              picks={picks}
-              onPick={(matchId, itemId) => {
-                if (viewOnly) return;
-                const newPicks = clearDownstream(matchId, state.rounds, picks);
-                newPicks[matchId] = itemId;
-                setPicks(newPicks);
-                setSaved(false);
-              }}
-              mode={mode}
-              readOnlyRounds={readOnlyRounds}
-            />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <BracketView
+                rounds={augmented}
+                itemMap={itemMap}
+                picks={picks}
+                onPick={(matchId, itemId) => {
+                  if (viewOnly) return;
+                  const newPicks = clearDownstream(matchId, state.rounds, picks);
+                  newPicks[matchId] = itemId;
+                  setPicks(newPicks);
+                  setSaved(false);
+                }}
+                mode={mode}
+                readOnlyRounds={readOnlyRounds}
+                reorderMode={canDragReorder}
+                activeReorderItemId={activeItemId}
+              />
+              <DragOverlay dropAnimation={null}>
+                {activeItem && (
+                  <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 shadow-lg scale-[1.02] text-sm">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
+                      {activeItem.seed}
+                    </span>
+                    <span className="text-zinc-700">{activeItem.name}</span>
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
+            {reorderError && (
+              <p className="text-xs text-red-500">{reorderError}</p>
+            )}
 
             {!viewOnly && (
               <div className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm space-y-3">

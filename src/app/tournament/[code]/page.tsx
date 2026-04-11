@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useEffect, useRef, useState, useCallback } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft, GripVertical } from "lucide-react";
+import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
@@ -15,23 +15,6 @@ import { LobbyCTA } from "@/components/lobby-cta";
 import { LobbyPageSkeleton } from "@/components/page-spinner";
 import { Spinner } from "@/components/spinner";
 import type { Participant, TournamentState } from "@/types/tournament";
-import {
-  DndContext,
-  DragOverlay,
-  closestCenter,
-  useSensor,
-  useSensors,
-  PointerSensor,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { SortableBracketItem } from "@/components/sortable-bracket-item";
-import type { TournamentItem } from "@/types/tournament";
 
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -46,14 +29,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [localItems, setLocalItems] = useState<TournamentItem[]>([]);
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
-  const [reorderError, setReorderError] = useState("");
-  const itemsInitialized = useRef(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
 
   const fetchState = useCallback(async (authToken: string, signal?: AbortSignal) => {
     const response = await fetch(`/api/tournaments/${code}`, {
@@ -137,57 +112,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
       setTimeout(() => setCopied(false), 2000);
     });
   }
-
-  // Intentionally one-time: polling must not overwrite localItems after a drag reorder.
-  // A page reload is the recovery path if another session changes the order.
-  useEffect(() => {
-    if (tournamentData?.items && !itemsInitialized.current) {
-      setLocalItems(tournamentData.items);
-      itemsInitialized.current = true;
-    }
-  }, [tournamentData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleDragStart = useCallback(function(event: DragStartEvent) {
-    setActiveItemId(event.active.id as string);
-  }, []);
-
-  const handleDragEnd = useCallback(async function(event: DragEndEvent) {
-    const { active, over } = event;
-    setActiveItemId(null);
-
-    if (!token) return;
-
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = localItems.findIndex((i) => i.id === active.id);
-    const newIndex = localItems.findIndex((i) => i.id === over.id);
-    // Snapshot before the optimistic move — used to revert if the API call fails.
-    // Note: concurrent drags while a request is in-flight will use the latest snapshot.
-    const previousItems = localItems;
-    const newItems = arrayMove(localItems, oldIndex, newIndex);
-
-    setLocalItems(newItems);
-    setReorderError("");
-
-    try {
-      const res = await fetch(`/api/tournaments/${code}/items/order`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ itemIds: newItems.map((i) => i.id) }),
-      });
-      if (!res.ok) {
-        const body = await res.json();
-        setLocalItems(previousItems);
-        setReorderError(body.error ?? "Erro ao reordenar");
-      }
-    } catch {
-      setLocalItems(previousItems);
-      setReorderError("Erro de rede ao reordenar");
-    }
-  }, [localItems, code, token]);
 
   if (!token) {
     return (
@@ -275,14 +199,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   if (!tournamentData) return <LobbyPageSkeleton />;
 
   const { tournament, participants, items } = tournamentData;
-  const hasAnyPicksSubmitted = participants.some((p) => p.hasSubmittedPicks);
-  const canReorder =
-    isCreator &&
-    tournament.status === TournamentStatus.LOBBY &&
-    !hasAnyPicksSubmitted;
-  const activeItem = activeItemId
-    ? localItems.find((i) => i.id === activeItemId)
-    : null;
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50">
@@ -368,59 +284,16 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
                 <Trophy className="h-3.5 w-3.5" />
                 Chaveamento · {items.length} itens
               </h2>
-
-              {canReorder ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={localItems.map((i) => i.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <ul className="space-y-1.5">
-                      {localItems.map((item, index) => (
-                        <SortableBracketItem key={item.id} item={item} index={index} />
-                      ))}
-                    </ul>
-                  </SortableContext>
-
-                  <DragOverlay>
-                    {activeItem && (
-                      <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 shadow-lg scale-[1.02] text-sm">
-                        <GripVertical className="h-4 w-4 text-zinc-300" />
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
-                          {localItems.indexOf(activeItem) + 1}
-                        </span>
-                        <span className="text-zinc-700">{activeItem.name}</span>
-                      </div>
-                    )}
-                  </DragOverlay>
-                </DndContext>
-              ) : (
-                <ul className="space-y-1.5">
-                  {items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-2 text-sm">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
-                        {item.seed}
-                      </span>
-                      <span className="text-zinc-700">{item.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {isCreator && hasAnyPicksSubmitted && tournament.status === TournamentStatus.LOBBY && (
-                <p className="mt-2 text-xs text-zinc-400">
-                  Reordenação bloqueada — um ou mais participantes já enviaram palpites.
-                </p>
-              )}
-
-              {reorderError && (
-                <p className="mt-2 text-xs text-red-500">{reorderError}</p>
-              )}
+              <ul className="space-y-1.5">
+                {items.map((item) => (
+                  <li key={item.id} className="flex items-center gap-2 text-sm">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xxs font-bold text-zinc-500">
+                      {item.seed}
+                    </span>
+                    <span className="text-zinc-700">{item.name}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 

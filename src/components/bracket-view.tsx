@@ -10,6 +10,7 @@ import {
 import { RoundStatus } from "@/constants/tournament";
 import { PulseDot } from "@/components/pulse-dot";
 import { ResultIcon } from "@/components/result-icon";
+import { ReorderableSlotItem } from "@/components/reorderable-slot-item";
 import type { TournamentItem, BracketRound } from "@/types/tournament";
 
 type BracketViewProps = {
@@ -19,6 +20,8 @@ type BracketViewProps = {
   onPick?: (matchId: string, itemId: string) => void;
   mode?: "pick" | "predict" | "view";
   readOnlyRounds?: Set<number>;
+  reorderMode?: boolean;
+  activeReorderItemId?: string | null;
 };
 
 export default function BracketView({
@@ -28,6 +31,8 @@ export default function BracketView({
   onPick,
   mode = "view",
   readOnlyRounds = new Set(),
+  reorderMode = false,
+  activeReorderItemId = null,
 }: BracketViewProps) {
   if (!rounds.length) return null;
   const totalRounds = rounds.length;
@@ -128,6 +133,22 @@ export default function BracketView({
                           const isWinner = isResolved && match.winnerId === item.id;
                           const isLoser = isResolved && match.winnerId !== null && match.winnerId !== item.id;
                           const isSelected = !isResolved && selectedItemId === item.id;
+
+                          if (reorderMode && roundIndex === 0) {
+                            return (
+                              <ReorderableSlotItem
+                                key={item.id}
+                                item={item}
+                                isFirstSlot={isFirstSlot}
+                                isPickable={isPickable}
+                                isSelected={isSelected}
+                                isWinner={isWinner}
+                                isLoser={isLoser}
+                                isDraggingThis={activeReorderItemId === item.id}
+                                onPick={() => onPick?.(match.id, item.id)}
+                              />
+                            );
+                          }
 
                           return (
                             <button
