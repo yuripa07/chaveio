@@ -12,8 +12,11 @@ import { INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/constants/styles";
 import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
 import { BackLink } from "@/components/back-link";
 import { ErrorAlert } from "@/components/error-alert";
+import { KickParticipantDialog } from "@/components/kick-participant-dialog";
 import { LobbyCTA } from "@/components/lobby-cta";
 import { LobbyPageSkeleton } from "@/components/page-spinner";
+import { ParticipantAvatar } from "@/components/participant-avatar";
+import { SectionHeader } from "@/components/section-header";
 import { Spinner } from "@/components/spinner";
 import { useLocale } from "@/contexts/locale-context";
 import type { Participant, TournamentState } from "@/types/tournament";
@@ -290,16 +293,15 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
-                <User className="h-3.5 w-3.5" />
-                {`${t.lobby.participantsSection} · ${participants.length}`}
-              </h2>
+              <SectionHeader
+                icon={<User className="h-3.5 w-3.5" />}
+                label={t.lobby.participantsSection}
+                count={participants.length}
+              />
               <ul className="space-y-2">
                 {participants.map((participant: Participant) => (
                   <li key={participant.id} className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">
-                      {participant.displayName[0].toUpperCase()}
-                    </div>
+                    <ParticipantAvatar name={participant.displayName} />
                     <span className="flex-1 text-sm font-medium">{participant.displayName}</span>
                     <div className="flex items-center gap-1.5">
                       {participant.isCreator && (
@@ -329,10 +331,11 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
             </div>
 
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-1.5 text-xxs font-semibold uppercase tracking-wider text-zinc-400">
-                <Trophy className="h-3.5 w-3.5" />
-                {`${t.lobby.bracketSection} · ${t.lobby.items(items.length)}`}
-              </h2>
+              <SectionHeader
+                icon={<Trophy className="h-3.5 w-3.5" />}
+                label={t.lobby.bracketSection}
+                count={t.lobby.items(items.length)}
+              />
               <ul className="space-y-1.5">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-center gap-2 text-sm">
@@ -359,36 +362,13 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
         </div>
       </div>
 
-      {kickTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-base font-bold">{t.common.kickTitle}</h2>
-            <p className="text-sm text-zinc-600">
-              {t.common.kickConfirm(kickTarget.displayName)}
-            </p>
-            {kickError && <ErrorAlert message={kickError} />}
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setKickTarget(null)}
-                disabled={kicking}
-                className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40"
-              >
-                {t.common.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={handleKick}
-                disabled={kicking}
-                className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
-              >
-                {kicking && <Spinner size="sm" />}
-                {t.common.kick}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <KickParticipantDialog
+        participant={kickTarget}
+        onConfirm={handleKick}
+        onCancel={() => setKickTarget(null)}
+        isLoading={kicking}
+        error={kickError}
+      />
     </main>
   );
 }

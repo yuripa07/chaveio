@@ -11,8 +11,10 @@ import { cn } from "@/lib/cn";
 import { translateApiError } from "@/lib/translate-api-error";
 import { TournamentStatus, RoundStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
+import { KickParticipantDialog } from "@/components/kick-participant-dialog";
 import { LivePageSkeleton } from "@/components/page-spinner";
 import { InfoBanner } from "@/components/info-banner";
+import { ParticipantAvatar } from "@/components/participant-avatar";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
 import { Spinner } from "@/components/spinner";
@@ -323,9 +325,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
               <ul className="divide-y divide-zinc-50">
                 {state.participants.map((participant) => (
                   <li key={participant.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">
-                      {participant.displayName[0].toUpperCase()}
-                    </div>
+                    <ParticipantAvatar name={participant.displayName} />
                     <span className="flex-1 text-sm font-medium text-zinc-800">{participant.displayName}</span>
                     {participant.isCreator && (
                       <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xxs font-semibold text-indigo-600">
@@ -350,38 +350,13 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
         )}
       </div>
 
-      {kickTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-base font-bold">{t.common.kickTitle}</h2>
-            <p className="text-sm text-zinc-600">
-              {t.common.kickConfirm(kickTarget.displayName)}
-            </p>
-            {kickError && (
-              <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-600">{kickError}</p>
-            )}
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setKickTarget(null)}
-                disabled={kicking}
-                className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-40"
-              >
-                {t.common.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={handleKick}
-                disabled={kicking}
-                className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40"
-              >
-                {kicking && <Spinner size="sm" />}
-                {t.common.kick}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <KickParticipantDialog
+        participant={kickTarget}
+        onConfirm={handleKick}
+        onCancel={() => { setKickTarget(null); setKickError(""); }}
+        isLoading={kicking}
+        error={kickError}
+      />
     </main>
   );
 }
