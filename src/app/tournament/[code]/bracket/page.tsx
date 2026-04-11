@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Send, CheckCircle2, BarChart2 } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { usePolling } from "@/hooks/use-polling";
 import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
 import { cn } from "@/lib/cn";
@@ -30,7 +31,8 @@ type BracketPageState = TournamentState & { myPicks: Record<string, string> };
 export default function BracketPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, tokenReady, participantId, isCreator, clearToken } = useTournamentToken(code);
+  const { token, participantId, isCreator, clearToken } = useTournamentToken(code);
+  const auth = useRequireParticipant(code);
 
   const [state, setState] = useState<BracketPageState | null>(null);
   const [picks, setPicks] = useState<Record<string, string>>({});
@@ -111,7 +113,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         setReorderError(body.error ?? "Erro ao reordenar");
       } else {
         // Reload to sync bracket view with new round-1 pairings
-        const newState = await loadState(token);
+        const newState = await loadState(token ?? "");
         if (newState) {
           setState(newState);
           setLocalItems(newState.items);
@@ -126,9 +128,8 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
   }
 
   useEffect(() => {
-    if (!tokenReady) return;
-    if (!token) { router.replace(`/tournament/${code}`); return; }
-    loadState(token).then((newState) => {
+    if (!auth.ready) return;
+    loadState(auth.token).then((newState) => {
       if (!newState) return;
       if (newState.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -137,12 +138,12 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       setState(newState);
       setPicks(newState.myPicks);
     });
-  }, [token, tokenReady, code, loadState, router]);
+  }, [auth.ready, auth.ready ? auth.token : null, code, loadState, router]);
 
   usePolling(
     async (signal) => {
-      if (!token) return;
-      const newState = await loadState(token, signal);
+      if (!auth.ready) return;
+      const newState = await loadState(auth.token, signal);
       if (!newState) return;
       if (newState.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -152,12 +153,12 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       setPicks((prev) => ({ ...newState.myPicks, ...prev }));
     },
     POLL_INTERVAL_BRACKET,
-    !!token && state?.tournament.status === TournamentStatus.ACTIVE
+    auth.ready && state?.tournament.status === TournamentStatus.ACTIVE
   );
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!token || !state) return;
+    if (!auth.ready || !state) return;
     setSubmitting(true);
     setError("");
     setSaved(false);
@@ -165,7 +166,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       const picksPayload = Object.entries(picks).map(([matchId, pickedItemId]) => ({ matchId, pickedItemId }));
       const response = await fetch("/api/picks", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` },
         body: JSON.stringify({ tournamentCode: code, picks: picksPayload }),
       });
       if (!response.ok) {
@@ -173,7 +174,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         return;
       }
       setSaved(true);
-      const newState = await loadState(token);
+      const newState = await loadState(auth.token);
       if (newState) setState(newState);
       if (state.tournament.status === TournamentStatus.LOBBY) {
         router.replace(`/tournament/${code}`);
@@ -223,6 +224,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
   const allPicked = eligibleCount > 0 && pickedCount === eligibleCount;
 
+  if (!auth.ready) return <BracketPageSkeleton />;
   if (!state) return <BracketPageSkeleton />;
 
   const mode = viewOnly ? "view" : "predict";
