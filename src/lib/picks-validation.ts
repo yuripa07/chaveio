@@ -50,7 +50,7 @@ export function validateBracketPicks(params: {
     if (!pickMap.has(match.id)) {
       return {
         valid: false,
-        error: `Missing pick for match ${match.id} (round ${match.roundNumber}, match ${match.matchNumber})`,
+        error: `Missing pick for match ${match.id} (round ${match.roundNumber}, match ${match.matchNumber}).`,
       };
     }
   }
@@ -64,7 +64,7 @@ export function validateBracketPicks(params: {
       if (!slotItems.includes(pickedItemId)) {
         return {
           valid: false,
-          error: `Invalid pick for match ${match.id}: item "${pickedItemId}" not in match slots`,
+          error: `Invalid pick for match ${match.id}: item "${pickedItemId}" not in match slots.`,
         };
       }
     } else {
@@ -76,7 +76,7 @@ export function validateBracketPicks(params: {
       const feeder2 = matchByRoundAndNumber.get(`${prevRoundNumber}:${feeder2Num}`);
 
       if (!feeder1 || !feeder2) {
-        return { valid: false, error: `Could not find feeder matches for match ${match.id}` };
+        return { valid: false, error: `Could not find feeder matches for match ${match.id}.` };
       }
 
       const pick1 = pickMap.get(feeder1.id);
@@ -89,7 +89,7 @@ export function validateBracketPicks(params: {
       if (!validPredecessors.has(pickedItemId)) {
         return {
           valid: false,
-          error: `Cascade violation for match ${match.id} (round ${match.roundNumber}): item "${pickedItemId}" did not advance from feeder matches`,
+          error: `Cascade violation for match ${match.id} (round ${match.roundNumber}): item "${pickedItemId}" did not advance from feeder matches.`,
         };
       }
     }

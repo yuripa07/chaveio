@@ -34,17 +34,17 @@ function extractBearer(req: NextRequest): string | null {
 
 export async function requireParticipant(req: NextRequest): Promise<TokenPayload> {
   const token = extractBearer(req);
-  if (!token) throw new AuthError("Missing token", 401);
+  if (!token) throw new AuthError("Missing token.", 401);
   try {
     return await verifyToken(token);
   } catch {
-    throw new AuthError("Invalid token", 401);
+    throw new AuthError("Invalid token.", 401);
   }
 }
 
 export async function requireCreator(req: NextRequest): Promise<TokenPayload> {
   const payload = await requireParticipant(req);
-  if (!payload.isCreator) throw new AuthError("Creator only", 403);
+  if (!payload.isCreator) throw new AuthError("Creator only.", 403);
   return payload;
 }
 
