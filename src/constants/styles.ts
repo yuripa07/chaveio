@@ -8,6 +8,6 @@ export const INPUT_CLASS = cn(
 
 export const PRIMARY_BUTTON_CLASS = cn(
   "w-full rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white",
-  "shadow-sm shadow-indigo-200 dark:shadow-indigo-900 hover:bg-indigo-700 active:scale-[.98] transition",
+  "shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition",
   "disabled:cursor-not-allowed disabled:opacity-40"
 );

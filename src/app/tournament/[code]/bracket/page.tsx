@@ -345,7 +345,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
                   <button
                     type="submit"
                     disabled={submitting || !allPicked}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-900 hover:bg-indigo-700 active:scale-[.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {submitting ? (
                       <>

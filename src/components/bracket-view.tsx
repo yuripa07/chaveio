@@ -53,7 +53,7 @@ export default function BracketView({
               <div className="mb-2 px-4">
                 <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
                   {round.name || (isLastRound ? t.bracketView.final : t.bracketView.round(round.roundNumber))}
-                  <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-zinc-500">
+                  <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-zinc-500 dark:text-zinc-400">
                     {round.pointValue}pt
                   </span>
                   {round.status === RoundStatus.ACTIVE && (
@@ -87,28 +87,28 @@ export default function BracketView({
                       {/* Right connector */}
                       {!isLastRound && (
                         <div
-                          className="absolute border-t border-zinc-200"
+                          className="absolute border-t border-zinc-200 dark:border-zinc-700"
                           style={{ right: 0, width: 16, top: "50%" }}
                         />
                       )}
                       {/* Left vertical bar joining feeder pair */}
                       {roundIndex > 0 && (
                         <div
-                          className="absolute border-l border-zinc-200"
+                          className="absolute border-l border-zinc-200 dark:border-zinc-700"
                           style={{ left: 0, top: matchHeight / 4, bottom: matchHeight / 4 }}
                         />
                       )}
                       {/* Left horizontal stub */}
                       {roundIndex > 0 && (
                         <div
-                          className="absolute border-t border-zinc-200"
+                          className="absolute border-t border-zinc-200 dark:border-zinc-700"
                           style={{ left: 0, width: 16, top: "50%" }}
                         />
                       )}
 
                       {/* Match card */}
                       <div
-                        className="mx-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+                        className="mx-4 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm"
                         style={{
                           width: BRACKET_COLUMN_WIDTH,
                           marginTop: verticalPadding,
@@ -123,8 +123,8 @@ export default function BracketView({
                                 key={slotIndex}
                                 style={{ height: BRACKET_ITEM_HEIGHT }}
                                 className={cn(
-                                  "flex items-center px-3 text-xs text-zinc-300",
-                                  !isFirstSlot && "border-t border-zinc-100"
+                                  "flex items-center px-3 text-xs text-zinc-300 dark:text-zinc-600",
+                                  !isFirstSlot && "border-t border-zinc-100 dark:border-zinc-800"
                                 )}
                               >
                                 {t.bracketView.tbd}
@@ -161,18 +161,18 @@ export default function BracketView({
                               onClick={() => isPickable && onPick?.(match.id, item.id)}
                               className={cn(
                                 "flex w-full items-center gap-2 px-3 text-left text-sm transition-colors",
-                                !isFirstSlot && "border-t border-zinc-100",
-                                isWinner && "bg-emerald-50 text-emerald-700",
-                                isLoser && "bg-white text-zinc-300",
+                                !isFirstSlot && "border-t border-zinc-100 dark:border-zinc-800",
+                                isWinner && "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400",
+                                isLoser && "bg-white dark:bg-zinc-900 text-zinc-300 dark:text-zinc-600",
                                 isSelected && "bg-indigo-600 text-white",
-                                !isWinner && !isLoser && !isSelected && isPickable && "hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer",
-                                !isWinner && !isLoser && !isSelected && !isPickable && "bg-white text-zinc-700"
+                                !isWinner && !isLoser && !isSelected && isPickable && "hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer",
+                                !isWinner && !isLoser && !isSelected && !isPickable && "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
                               )}
                             >
                               <span
                                 className={cn(
                                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold",
-                                  isWinner ? "bg-emerald-100 text-emerald-600" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 text-zinc-400"
+                                  isWinner ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
                                 )}
                               >
                                 {item.seed}

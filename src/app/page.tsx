@@ -62,7 +62,7 @@ export default function Home() {
         <div className="w-full max-w-sm space-y-10 text-center">
 
           <div className="flex flex-col items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-indigo-900">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-none">
               <Trophy className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -74,7 +74,7 @@ export default function Home() {
           <div className="space-y-3">
             <Link
               href="/tournament/new"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 active:scale-[.98] transition"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition"
             >
               <PlusCircle className="h-4 w-4" />
               {t.landing.createTournament}
