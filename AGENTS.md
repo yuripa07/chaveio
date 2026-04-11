@@ -84,12 +84,14 @@ src/
 │   ├── cn.ts                # cn() — twMerge wrapper
 │   ├── codes.ts             # generateCode (6-char, no ambiguous: 0OI1)
 │   ├── db.ts                # PrismaClient singleton (globalThis pattern)
+│   ├── auth-guard.ts        # resolveAuthGuardStatus (pure fn, returns AuthGuardStatus discriminated union)
 │   ├── picks-validation.ts  # validateBracketPicks (cascade rules)
 │   ├── points.ts            # computeRoundPoints, computeMaxPoints
 │   ├── token-client.ts      # decodeTokenPayload (client-side, no verify)
 │   └── token-storage.ts     # getStoredToken, setStoredToken (try-catch wrappers)
 ├── hooks/
 │   ├── use-polling.ts        # usePolling() — interval + AbortController cleanup
+│   ├── use-require-participant.ts # useRequireParticipant() — auth guard hook for protected pages
 │   └── use-tournament-token.ts # useTournamentToken() — localStorage JWT management
 ├── components/
 │   ├── bracket-view.tsx       # SVG bracket visualization (pick/predict/view modes)
@@ -118,6 +120,7 @@ src/
 
 tests/
 ├── unit/
+│   ├── auth-guard.test.ts
 │   ├── bracket.test.ts
 │   ├── codes.test.ts
 │   ├── picks-validation.test.ts

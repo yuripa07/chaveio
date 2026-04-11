@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BarChart2, Clock, Swords, Trophy, AlertTriangle, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, RoundStatus } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
@@ -25,7 +26,8 @@ type PendingWinner = { matchId: string; item: TournamentItem };
 export default function LivePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
-  const { token, tokenReady, isCreator, clearToken } = useTournamentToken(code);
+  const { token, clearToken } = useTournamentToken(code);
+  const auth = useRequireParticipant(code, { requireCreator: true });
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [rankings, setRankings] = useState<RankEntry[]>([]);
@@ -56,10 +58,8 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
   }, [code, clearToken]);
 
   useEffect(() => {
-    if (!tokenReady) return;
-    if (!token) { router.replace(`/tournament/${code}`); return; }
-    if (!isCreator) { router.replace(`/tournament/${code}/bracket`); return; }
-    loadState(token).then((result) => {
+    if (!auth.ready) return;
+    loadState(auth.token).then((result) => {
       if (!result) return;
       if (result.state.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -68,7 +68,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setState(result.state);
       setRankings(result.rankings);
     });
-  }, [token, tokenReady, isCreator, code, loadState, router]);
+  }, [auth.ready, auth.ready ? auth.token : null, code, loadState, router]);
 
   async function confirmWinner() {
     if (!token || !pendingWinner) return;
@@ -131,6 +131,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     [state?.items]
   );
 
+  if (!auth.ready) return <LivePageSkeleton />;
   if (!state) return <LivePageSkeleton />;
 
   const activeRound = state.rounds.find((r) => r.status === RoundStatus.ACTIVE);
@@ -313,7 +314,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
           </section>
         )}
 
-        {isCreator && (
+        {auth.isCreator && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Participantes</h2>
             <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm">

@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { useRequireParticipant } from "@/hooks/use-require-participant";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_RESULTS } from "@/constants/tournament";
@@ -21,8 +21,8 @@ const BracketView = dynamic(() => import("@/components/bracket-view"), {
 
 export default function ResultsPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
-  const router = useRouter();
-  const { token, tokenReady, participantId, isCreator, clearToken } = useTournamentToken(code);
+  const { clearToken } = useTournamentToken(code);
+  const auth = useRequireParticipant(code);
 
   const [state, setState] = useState<TournamentState | null>(null);
   const [myPicks, setMyPicks] = useState<PickResult[]>([]);
@@ -47,28 +47,27 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
   // Initial load
   useEffect(() => {
-    if (!tokenReady) return;
-    if (!token) { router.replace(`/tournament/${code}`); return; }
-    loadData(token).then((result) => {
+    if (!auth.ready) return;
+    loadData(auth.token).then((result) => {
       if (!result) return;
       setState(result.tournamentData);
       setMyPicks(result.picks);
       setRankings(result.rankings);
     });
-  }, [token, tokenReady, code, loadData, router]);
+  }, [auth.ready, auth.ready ? auth.token : null, code, loadData]);
 
   // Poll until finished
   usePolling(
     async (signal) => {
-      if (!token) return;
-      const result = await loadData(token, signal);
+      if (!auth.ready) return;
+      const result = await loadData(auth.token, signal);
       if (!result) return;
       setState(result.tournamentData);
       setMyPicks(result.picks);
       setRankings(result.rankings);
     },
     POLL_INTERVAL_RESULTS,
-    !!token && tokenReady && state?.tournament.status !== TournamentStatus.FINISHED
+    auth.ready && state?.tournament.status !== TournamentStatus.FINISHED
   );
 
   const itemMap = useMemo(
@@ -81,6 +80,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     [myPicks]
   );
 
+  if (!auth.ready) return <ResultsPageSkeleton />;
   if (!state) return <ResultsPageSkeleton />;
 
   let myTotalPoints = 0;
@@ -110,10 +110,10 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         code={code}
         name={state.tournament.name}
         backHref={
-          isFinished ? "/" : isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`
+          isFinished ? "/" : auth.isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`
         }
         backLabel={
-          isFinished ? "Início" : isCreator ? "Definir vencedores" : "Meus palpites"
+          isFinished ? "Início" : auth.isCreator ? "Definir vencedores" : "Meus palpites"
         }
         rightSlot={statusBadge}
       />
@@ -136,7 +136,7 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
         {rankings.length > 1 && (
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ranking</h2>
-            <RankingsTable rankings={rankings} currentParticipantId={participantId} />
+            <RankingsTable rankings={rankings} currentParticipantId={auth.participantId} />
           </section>
         )}
 
