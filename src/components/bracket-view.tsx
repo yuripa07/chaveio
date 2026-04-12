@@ -200,7 +200,7 @@ export default function BracketView({
 
         <div className="flex flex-col">
           <div className="mb-2 px-4">
-            <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
+            <span className="inline-flex items-center gap-1.5 py-0.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
               <Trophy className="h-3 w-3" />
               {t.bracketView.champion}
             </span>
