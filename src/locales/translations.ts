@@ -152,6 +152,7 @@ export interface Translations {
     final: string;
     round: (n: number) => string;
     tbd: string;
+    champion: string;
   };
   apiErrors: Record<string, string>;
 }
@@ -309,6 +310,7 @@ export const ptBR: Translations = {
     final: "Final",
     round: (n) => `Rodada ${n}`,
     tbd: "A definir",
+    champion: "Campeão",
   },
   apiErrors: {
     "Invalid request body.": "Requisição inválida.",
@@ -496,6 +498,7 @@ export const en: Translations = {
     final: "Final",
     round: (n) => `Round ${n}`,
     tbd: "TBD",
+    champion: "Champion",
   },
   apiErrors: {},
 };
