@@ -1,5 +1,6 @@
 "use client";
 
+import { Trophy } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   BRACKET_BASE_HEIGHT,
@@ -10,6 +11,8 @@ import {
 import { RoundStatus } from "@/constants/tournament";
 import { PulseDot } from "@/components/pulse-dot";
 import { ResultIcon } from "@/components/result-icon";
+import { ReorderableSlotItem } from "@/components/reorderable-slot-item";
+import { useLocale } from "@/contexts/locale-context";
 import type { TournamentItem, BracketRound } from "@/types/tournament";
 
 type BracketViewProps = {
@@ -19,6 +22,8 @@ type BracketViewProps = {
   onPick?: (matchId: string, itemId: string) => void;
   mode?: "pick" | "predict" | "view";
   readOnlyRounds?: Set<number>;
+  reorderMode?: boolean;
+  activeReorderItemId?: string | null;
 };
 
 export default function BracketView({
@@ -28,9 +33,17 @@ export default function BracketView({
   onPick,
   mode = "view",
   readOnlyRounds = new Set(),
+  reorderMode = false,
+  activeReorderItemId = null,
 }: BracketViewProps) {
+  const { t } = useLocale();
   if (!rounds.length) return null;
   const totalRounds = rounds.length;
+  const finalRound = rounds[totalRounds - 1];
+  const finalMatch = finalRound.matches[0];
+  const championId = finalMatch?.winnerId ?? (mode !== "view" && finalMatch ? picks[finalMatch.id] : undefined);
+  const champion = championId ? itemMap[championId] : null;
+  const finalMatchHeight = BRACKET_BASE_HEIGHT * Math.pow(2, totalRounds - 1);
 
   return (
     <div className="overflow-x-auto">
@@ -45,8 +58,8 @@ export default function BracketView({
             <div key={round.id} className="flex flex-col" style={{ width: BRACKET_COLUMN_WIDTH + 32 }}>
               <div className="mb-2 px-4">
                 <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
-                  {round.name || (isLastRound ? "Final" : `Rodada ${round.roundNumber}`)}
-                  <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-zinc-500">
+                  {round.name || (isLastRound ? t.bracketView.final : t.bracketView.round(round.roundNumber))}
+                  <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-zinc-500 dark:text-zinc-400">
                     {round.pointValue}pt
                   </span>
                   {round.status === RoundStatus.ACTIVE && (
@@ -77,31 +90,28 @@ export default function BracketView({
                       className="relative flex items-center"
                       style={{ height: matchHeight }}
                     >
-                      {/* Right connector */}
-                      {!isLastRound && (
-                        <div
-                          className="absolute border-t border-zinc-200"
-                          style={{ right: 0, width: 16, top: "50%" }}
-                        />
-                      )}
+                      <div
+                        className="absolute border-t border-zinc-200 dark:border-zinc-700"
+                        style={{ right: 0, width: 16, top: "50%" }}
+                      />
                       {/* Left vertical bar joining feeder pair */}
                       {roundIndex > 0 && (
                         <div
-                          className="absolute border-l border-zinc-200"
+                          className="absolute border-l border-zinc-200 dark:border-zinc-700"
                           style={{ left: 0, top: matchHeight / 4, bottom: matchHeight / 4 }}
                         />
                       )}
                       {/* Left horizontal stub */}
                       {roundIndex > 0 && (
                         <div
-                          className="absolute border-t border-zinc-200"
+                          className="absolute border-t border-zinc-200 dark:border-zinc-700"
                           style={{ left: 0, width: 16, top: "50%" }}
                         />
                       )}
 
                       {/* Match card */}
                       <div
-                        className="mx-4 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+                        className="mx-4 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm"
                         style={{
                           width: BRACKET_COLUMN_WIDTH,
                           marginTop: verticalPadding,
@@ -116,11 +126,11 @@ export default function BracketView({
                                 key={slotIndex}
                                 style={{ height: BRACKET_ITEM_HEIGHT }}
                                 className={cn(
-                                  "flex items-center px-3 text-xs text-zinc-300",
-                                  !isFirstSlot && "border-t border-zinc-100"
+                                  "flex items-center px-3 text-xs text-zinc-300 dark:text-zinc-600",
+                                  !isFirstSlot && "border-t border-zinc-100 dark:border-zinc-800"
                                 )}
                               >
-                                A definir
+                                {t.bracketView.tbd}
                               </div>
                             );
                           }
@@ -128,6 +138,22 @@ export default function BracketView({
                           const isWinner = isResolved && match.winnerId === item.id;
                           const isLoser = isResolved && match.winnerId !== null && match.winnerId !== item.id;
                           const isSelected = !isResolved && selectedItemId === item.id;
+
+                          if (reorderMode && roundIndex === 0) {
+                            return (
+                              <ReorderableSlotItem
+                                key={item.id}
+                                item={item}
+                                isFirstSlot={isFirstSlot}
+                                isPickable={isPickable}
+                                isSelected={isSelected}
+                                isWinner={isWinner}
+                                isLoser={isLoser}
+                                isDraggingThis={activeReorderItemId === item.id}
+                                onPick={() => onPick?.(match.id, item.id)}
+                              />
+                            );
+                          }
 
                           return (
                             <button
@@ -138,18 +164,18 @@ export default function BracketView({
                               onClick={() => isPickable && onPick?.(match.id, item.id)}
                               className={cn(
                                 "flex w-full items-center gap-2 px-3 text-left text-sm transition-colors",
-                                !isFirstSlot && "border-t border-zinc-100",
-                                isWinner && "bg-emerald-50 text-emerald-700",
-                                isLoser && "bg-white text-zinc-300",
+                                !isFirstSlot && "border-t border-zinc-100 dark:border-zinc-800",
+                                isWinner && "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400",
+                                isLoser && "bg-white dark:bg-zinc-900 text-zinc-300 dark:text-zinc-600",
                                 isSelected && "bg-indigo-600 text-white",
-                                !isWinner && !isLoser && !isSelected && isPickable && "hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer",
-                                !isWinner && !isLoser && !isSelected && !isPickable && "bg-white text-zinc-700"
+                                !isWinner && !isLoser && !isSelected && isPickable && "hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer",
+                                !isWinner && !isLoser && !isSelected && !isPickable && "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
                               )}
                             >
                               <span
                                 className={cn(
                                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold",
-                                  isWinner ? "bg-emerald-100 text-emerald-600" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 text-zinc-400"
+                                  isWinner ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
                                 )}
                               >
                                 {item.seed}
@@ -171,6 +197,52 @@ export default function BracketView({
             </div>
           );
         })}
+
+        <div className="flex flex-col">
+          <div className="mb-2 px-4">
+            <span className="inline-flex items-center gap-1.5 py-0.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
+              <Trophy className="h-3 w-3" />
+              {t.bracketView.champion}
+            </span>
+          </div>
+          <div className="relative flex items-center" style={{ height: finalMatchHeight }}>
+            <div
+              className="absolute border-t border-zinc-200 dark:border-zinc-700"
+              style={{ left: 0, width: 16, top: "50%" }}
+            />
+            <div
+              className={cn(
+                "mx-4 overflow-hidden rounded-xl border shadow-sm",
+                champion
+                  ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950"
+                  : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+              )}
+              style={{ width: BRACKET_COLUMN_WIDTH }}
+            >
+              {champion ? (
+                <div
+                  className="flex items-center gap-2 px-3"
+                  style={{ height: BRACKET_ITEM_HEIGHT }}
+                >
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400">
+                    {champion.seed}
+                  </span>
+                  <span className="truncate text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    {champion.name}
+                  </span>
+                  <Trophy className="ml-auto h-4 w-4 shrink-0 text-amber-500" />
+                </div>
+              ) : (
+                <div
+                  className="flex items-center px-3 text-xs text-zinc-300 dark:text-zinc-600"
+                  style={{ height: BRACKET_ITEM_HEIGHT }}
+                >
+                  {t.bracketView.tbd}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

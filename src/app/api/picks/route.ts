@@ -26,10 +26,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (!tournament || tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Tournament not found" }, { status: 404 });
+    return Response.json({ error: "Tournament not found." }, { status: 404 });
   }
   if (tournament.status === "FINISHED") {
-    return Response.json({ error: "Tournament is already finished" }, { status: 409 });
+    return Response.json({ error: "This tournament has ended." }, { status: 409 });
   }
 
   const participant = await prisma.participant.findUniqueOrThrow({
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     tournament.rounds.flatMap((r) => r.matches).filter((m) => m.status === "COMPLETE").map((m) => m.id)
   );
   if (picks.some((p) => completedMatchIds.has(p.matchId))) {
-    return Response.json({ error: "Cannot change picks for already-resolved matches" }, { status: 409 });
+    return Response.json({ error: "Cannot change picks for resolved matches." }, { status: 409 });
   }
 
   const validation = validateBracketPicks({
@@ -89,12 +89,12 @@ export async function GET(req: NextRequest) {
   const tournamentCode = searchParams.get("tournamentCode");
 
   if (!tournamentCode) {
-    return Response.json({ error: "Missing tournamentCode" }, { status: 400 });
+    return Response.json({ error: "Tournament code is required." }, { status: 400 });
   }
 
   const tournament = await prisma.tournament.findUnique({ where: { code: tournamentCode } });
   if (!tournament || tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Tournament not found" }, { status: 404 });
+    return Response.json({ error: "Tournament not found." }, { status: 404 });
   }
 
   const picks = await prisma.pick.findMany({

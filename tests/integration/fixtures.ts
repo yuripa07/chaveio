@@ -104,6 +104,34 @@ export async function getRankings(code: string, token: string | null) {
   });
 }
 
+export async function kickParticipant(
+  code: string,
+  participantId: string,
+  token: string | null
+) {
+  const { DELETE } = await import(
+    "@/app/api/tournaments/[code]/participants/[id]/route"
+  );
+  return DELETE(
+    req("DELETE", `/api/tournaments/${code}/participants/${participantId}`, undefined, token),
+    { params: Promise.resolve({ code, id: participantId }) }
+  );
+}
+
+export async function reorderItems(
+  code: string,
+  token: string | null,
+  itemIds: string[]
+) {
+  const { PATCH } = await import(
+    "@/app/api/tournaments/[code]/items/order/route"
+  );
+  return PATCH(
+    req("PATCH", `/api/tournaments/${code}/items/order`, { itemIds }, token),
+    { params: Promise.resolve({ code }) }
+  );
+}
+
 /**
  * Builds and submits a valid full-bracket prediction for a participant.
  * Always picks slot position 1 items, cascading deterministically through rounds.

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   const { name, items, creatorName, creatorPassword, roundNames } = body as {
@@ -27,12 +27,12 @@ export async function POST(req: NextRequest) {
   };
 
   if (!name || !creatorName || !creatorPassword) {
-    return Response.json({ error: "Missing required fields" }, { status: 400 });
+    return Response.json({ error: "Required fields are missing." }, { status: 400 });
   }
 
   if (!Array.isArray(items) || !isPowerOfTwo(items.length)) {
     return Response.json(
-      { error: "items must be a power of 2 between 4 and 32" },
+      { error: "Number of candidates must be 4, 8, 16, or 32." },
       { status: 400 }
     );
   }
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const totalRounds = Math.log2(items.length);
   if (roundNames && roundNames.length !== totalRounds) {
     return Response.json(
-      { error: `roundNames must have exactly ${totalRounds} entries` },
+      { error: `Tournament must have exactly ${totalRounds} round themes.` },
       { status: 400 }
     );
   }
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
   }
   if (!code) {
-    return Response.json({ error: "Failed to generate unique code" }, { status: 500 });
+    return Response.json({ error: "Failed to generate tournament code." }, { status: 500 });
   }
 
   const passwordHash = await hashPromise;

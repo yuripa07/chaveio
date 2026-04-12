@@ -158,6 +158,45 @@ describe("Late joiner", () => {
     expect(res.status).toBe(409); // COMPLETE match
   });
 
+  it("late joiner at round 1 can submit picks when some round-1 matches are already complete", async () => {
+    const { code, creatorToken } = await startedTournament();
+
+    const t = await getTournamentFromDb(code);
+    const firstMatch = t.rounds[0].matches[0];
+    await setWinner(code, firstMatch.id, firstMatch.slots[0].itemId, creatorToken);
+
+    const { token: eveToken } = await joinTournament(code, {
+      displayName: "Eve",
+      password: "pass123",
+    }).then((r) => r.json());
+
+    const eve = await testPrisma.participant.findFirst({ where: { displayName: "Eve" } });
+    expect(eve!.joinedAtRound).toBe(1);
+
+    const body = await getTournament(code, eveToken).then((r) => r.json());
+    const r1 = body.rounds[0];
+    const r2 = body.rounds[1];
+
+    const pendingR1Matches = r1.matches.filter((m: { status: string }) => m.status !== "COMPLETE");
+    expect(pendingR1Matches).toHaveLength(1);
+
+    const finalMatch = r2.matches[0];
+    expect(finalMatch.slots).toHaveLength(1);
+
+    const pendingMatch = pendingR1Matches[0];
+    const res = await submitPicks(eveToken, {
+      tournamentCode: code,
+      picks: [
+        { matchId: pendingMatch.id, pickedItemId: pendingMatch.slots[0].itemId },
+        { matchId: finalMatch.id, pickedItemId: finalMatch.slots[0].itemId },
+      ],
+    });
+    expect(res.status).toBe(200);
+
+    const eveAfter = await testPrisma.participant.findFirst({ where: { displayName: "Eve" } });
+    expect(eveAfter!.hasSubmittedPicks).toBe(true);
+  });
+
   it("creator is blocked until late joiner submits, then can continue", async () => {
     const { code, creatorToken } = await startedTournament();
 

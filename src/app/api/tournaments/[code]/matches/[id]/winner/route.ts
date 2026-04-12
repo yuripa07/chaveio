@@ -21,16 +21,16 @@ export async function POST(
   });
 
   if (!match || match.tournament.code !== code) {
-    return Response.json({ error: "Match not found" }, { status: 404 });
+    return Response.json({ error: "Match not found." }, { status: 404 });
   }
   if (match.tournament.id !== auth.payload.tournamentId) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
+    return Response.json({ error: "Access denied." }, { status: 403 });
   }
   if (match.status === "COMPLETE") {
-    return Response.json({ error: "Match already resolved" }, { status: 409 });
+    return Response.json({ error: "Match already resolved." }, { status: 409 });
   }
   if (!match.slots.some((s) => s.itemId === winnerId)) {
-    return Response.json({ error: "Winner not in match slots" }, { status: 400 });
+    return Response.json({ error: "Winner is not in this match." }, { status: 400 });
   }
 
   // All participants must have submitted picks
@@ -39,7 +39,7 @@ export async function POST(
   });
   if (pendingCount > 0) {
     return Response.json(
-      { error: "All participants must submit their picks before matches can be resolved" },
+      { error: "All participants must submit their picks before resolving matches." },
       { status: 409 }
     );
   }

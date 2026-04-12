@@ -69,6 +69,10 @@ src/
 │           ├── join/route.ts             # POST join
 │           ├── start/route.ts            # POST start (creator)
 │           ├── rankings/route.ts         # GET leaderboard (dense ranking)
+│           ├── items/
+│           │   └── order/route.ts        # PATCH reorder items (creator, LOBBY only)
+│           ├── participants/
+│           │   └── [id]/route.ts         # DELETE kick participant (creator, any status)
 │           └── matches/[id]/
 │               └── winner/route.ts       # POST set winner (creator)
 │       └── picks/route.ts               # GET/POST picks
@@ -80,12 +84,17 @@ src/
 │   ├── cn.ts                # cn() — twMerge wrapper
 │   ├── codes.ts             # generateCode (6-char, no ambiguous: 0OI1)
 │   ├── db.ts                # PrismaClient singleton (globalThis pattern)
+│   ├── auth-guard.ts        # resolveAuthGuardStatus (pure fn, returns AuthGuardStatus discriminated union)
 │   ├── picks-validation.ts  # validateBracketPicks (cascade rules)
 │   ├── points.ts            # computeRoundPoints, computeMaxPoints
 │   ├── token-client.ts      # decodeTokenPayload (client-side, no verify)
 │   └── token-storage.ts     # getStoredToken, setStoredToken (try-catch wrappers)
+├── contexts/
+│   ├── locale-context.tsx    # LocaleProvider, useLocale() — i18n context
+│   └── theme-context.tsx     # ThemeProvider, useTheme() — light/dark/system theme
 ├── hooks/
 │   ├── use-polling.ts        # usePolling() — interval + AbortController cleanup
+│   ├── use-require-participant.ts # useRequireParticipant() — auth guard hook for protected pages
 │   └── use-tournament-token.ts # useTournamentToken() — localStorage JWT management
 ├── components/
 │   ├── bracket-view.tsx       # SVG bracket visualization (pick/predict/view modes)
@@ -99,8 +108,13 @@ src/
 │   ├── rankings-table.tsx    # Leaderboard table (highlights current user)
 │   ├── result-icon.tsx       # Correct/incorrect/pending SVG icons
 │   ├── score-stat.tsx        # Score display card
+│   ├── sortable-bracket-item.tsx  # Drag-and-drop sortable item row (lobby, creator only)
+│   ├── kick-participant-dialog.tsx  # Accessible kick confirmation modal (ARIA, focus, Escape, click-outside)
+│   ├── participant-avatar.tsx  # Circular avatar with participant initial (indigo theme)
+│   ├── section-header.tsx     # Icon + uppercase label + optional count (text-xxs, used in lobby)
 │   ├── spinner.tsx           # Inline spinner (sm/md/lg)
-│   └── tournament-header.tsx # Sticky header with code/name/back
+│   ├── tournament-header.tsx # Sticky header with code/name/back
+│   └── locale-switcher.tsx   # Fixed bottom-right pill: theme toggle (Sun/Moon/Monitor) + locale buttons (PT/EN)
 ├── constants/
 │   ├── auth.ts               # JWT_EXPIRY = "30d"
 │   ├── bracket-layout.ts     # SVG dimensions (BRACKET_BASE_HEIGHT, COLUMN_WIDTH, etc.)
@@ -113,6 +127,7 @@ src/
 
 tests/
 ├── unit/
+│   ├── auth-guard.test.ts
 │   ├── bracket.test.ts
 │   ├── codes.test.ts
 │   ├── picks-validation.test.ts
@@ -129,7 +144,8 @@ tests/
 
 docs/
 ├── frontend-conventions.md   # Frontend patterns and rules
-└── backend-conventions.md    # Backend patterns and rules
+├── backend-conventions.md    # Backend patterns and rules
+└── i18n.md                   # i18n: adding strings, API error translation, locale detection
 ```
 
 ## Database Models
@@ -170,6 +186,8 @@ Header: `Authorization: Bearer <token>`
 | GET | `/api/tournaments/[code]/check` | -- | Public existence check `{ exists, status }` |
 | POST | `/api/tournaments/[code]/join` | -- | Join (password auth), return `{ token }` |
 | POST | `/api/tournaments/[code]/start` | Creator | Activate round 1, set tournament ACTIVE |
+| PATCH | `/api/tournaments/[code]/items/order` | Creator | Reorder bracket items (seeds + round-1 slots); blocked if any picks submitted |
+| DELETE | `/api/tournaments/[code]/participants/[id]` | Creator | Kick a participant (any status); their picks cascade-delete |
 | GET | `/api/tournaments/[code]/rankings` | Token | Leaderboard with dense ranking |
 | POST | `/api/tournaments/[code]/matches/[id]/winner` | Creator | Set winner, score picks, advance bracket |
 | POST | `/api/picks` | Token | Upsert all picks (atomic transaction) |
@@ -245,6 +263,8 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 10. **No inline components/IIFEs** — extract to named components
 11. **Derive state during render** — don't use useEffect to sync derived state
 12. **Shared bracket logic** — `augmentRounds()`, `clearDownstream()` in `lib/bracket-client.ts`
+13. **i18n** — never hardcode UI strings; always use `useLocale()` + `t.*`; see `docs/i18n.md`
+14. **Dark mode** — all new UI must include `dark:` variants; use `ThemeProvider`/`useTheme()` from `src/contexts/theme-context.tsx`; color mapping: `bg-white→dark:bg-zinc-900`, `bg-zinc-50→dark:bg-zinc-950`, `bg-zinc-100→dark:bg-zinc-800`, `text-zinc-900→dark:text-zinc-50`, `border-zinc-100→dark:border-zinc-800`
 
 ### Backend Patterns (see `docs/backend-conventions.md`)
 1. **`handleRequest()` helper** — `lib/api-utils.ts` handles auth + body parsing with consistent errors
@@ -255,6 +275,7 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 6. **Promise.all inside transactions** — parallelize independent writes
 7. **Response shapes**: mutations `{ success: true }`, queries `{ data }`, errors `{ error: "msg" }`
 8. **Auth gate testing** — always test both re-auth AND first-time-wrong-password (see docs/backend-conventions.md §8)
+9. **API error strings always in English** — frontend translates via `translateApiError()`; see `docs/i18n.md`
 
 ### Architecture Decisions
 | Decision | Rationale |
