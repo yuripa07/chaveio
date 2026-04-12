@@ -1,5 +1,6 @@
 "use client";
 
+import { Trophy } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   BRACKET_BASE_HEIGHT,
@@ -38,6 +39,11 @@ export default function BracketView({
   const { t } = useLocale();
   if (!rounds.length) return null;
   const totalRounds = rounds.length;
+  const finalRound = rounds[totalRounds - 1];
+  const finalMatch = finalRound.matches[0];
+  const championId = finalMatch?.winnerId ?? (finalMatch ? picks[finalMatch.id] : undefined);
+  const champion = championId ? itemMap[championId] : null;
+  const finalMatchHeight = BRACKET_BASE_HEIGHT * Math.pow(2, totalRounds - 1);
 
   return (
     <div className="overflow-x-auto">
@@ -84,13 +90,10 @@ export default function BracketView({
                       className="relative flex items-center"
                       style={{ height: matchHeight }}
                     >
-                      {/* Right connector */}
-                      {!isLastRound && (
-                        <div
-                          className="absolute border-t border-zinc-200 dark:border-zinc-700"
-                          style={{ right: 0, width: 16, top: "50%" }}
-                        />
-                      )}
+                      <div
+                        className="absolute border-t border-zinc-200 dark:border-zinc-700"
+                        style={{ right: 0, width: 16, top: "50%" }}
+                      />
                       {/* Left vertical bar joining feeder pair */}
                       {roundIndex > 0 && (
                         <div
@@ -194,6 +197,52 @@ export default function BracketView({
             </div>
           );
         })}
+
+        <div className="flex flex-col">
+          <div className="mb-2 px-4">
+            <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
+              <Trophy className="h-3 w-3" />
+              {t.bracketView.champion}
+            </span>
+          </div>
+          <div className="relative flex items-center" style={{ height: finalMatchHeight }}>
+            <div
+              className="absolute border-t border-zinc-200 dark:border-zinc-700"
+              style={{ left: 0, width: 16, top: "50%" }}
+            />
+            <div
+              className={cn(
+                "mx-4 overflow-hidden rounded-xl border shadow-sm",
+                champion
+                  ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950"
+                  : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+              )}
+              style={{ width: BRACKET_COLUMN_WIDTH }}
+            >
+              {champion ? (
+                <div
+                  className="flex items-center gap-2 px-3"
+                  style={{ height: BRACKET_ITEM_HEIGHT }}
+                >
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400">
+                    {champion.seed}
+                  </span>
+                  <span className="truncate text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    {champion.name}
+                  </span>
+                  <Trophy className="ml-auto h-4 w-4 shrink-0 text-amber-500" />
+                </div>
+              ) : (
+                <div
+                  className="flex items-center px-3 text-xs text-zinc-300 dark:text-zinc-600"
+                  style={{ height: BRACKET_ITEM_HEIGHT }}
+                >
+                  {t.bracketView.tbd}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
