@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateBracketPicks } from "@/lib/picks-validation";
 
 type Slot = { itemId: string; position: number };
-type Match = { id: string; matchNumber: number; status: string; slots: Slot[] };
+type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
 type Round = { roundNumber: number; matches: Match[] };
 
 function makeSlots(ids: [string, string]): Slot[] {
@@ -17,13 +17,13 @@ function make4ItemRounds(): Round[] {
     {
       roundNumber: 1,
       matches: [
-        { id: "m1", matchNumber: 1, status: "PENDING", slots: makeSlots(["A", "B"]) },
-        { id: "m2", matchNumber: 2, status: "PENDING", slots: makeSlots(["C", "D"]) },
+        { id: "m1", matchNumber: 1, status: "PENDING", winnerId: null, slots: makeSlots(["A", "B"]) },
+        { id: "m2", matchNumber: 2, status: "PENDING", winnerId: null, slots: makeSlots(["C", "D"]) },
       ],
     },
     {
       roundNumber: 2,
-      matches: [{ id: "m3", matchNumber: 1, status: "PENDING", slots: [] }],
+      matches: [{ id: "m3", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] }],
     },
   ];
 }
@@ -33,22 +33,22 @@ function make8ItemRounds(): Round[] {
     {
       roundNumber: 1,
       matches: [
-        { id: "m1", matchNumber: 1, status: "PENDING", slots: makeSlots(["A", "H"]) },
-        { id: "m2", matchNumber: 2, status: "PENDING", slots: makeSlots(["E", "D"]) },
-        { id: "m3", matchNumber: 3, status: "PENDING", slots: makeSlots(["C", "F"]) },
-        { id: "m4", matchNumber: 4, status: "PENDING", slots: makeSlots(["G", "B"]) },
+        { id: "m1", matchNumber: 1, status: "PENDING", winnerId: null, slots: makeSlots(["A", "H"]) },
+        { id: "m2", matchNumber: 2, status: "PENDING", winnerId: null, slots: makeSlots(["E", "D"]) },
+        { id: "m3", matchNumber: 3, status: "PENDING", winnerId: null, slots: makeSlots(["C", "F"]) },
+        { id: "m4", matchNumber: 4, status: "PENDING", winnerId: null, slots: makeSlots(["G", "B"]) },
       ],
     },
     {
       roundNumber: 2,
       matches: [
-        { id: "m5", matchNumber: 1, status: "PENDING", slots: [] },
-        { id: "m6", matchNumber: 2, status: "PENDING", slots: [] },
+        { id: "m5", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] },
+        { id: "m6", matchNumber: 2, status: "PENDING", winnerId: null, slots: [] },
       ],
     },
     {
       roundNumber: 3,
-      matches: [{ id: "m7", matchNumber: 1, status: "PENDING", slots: [] }],
+      matches: [{ id: "m7", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] }],
     },
   ];
 }
@@ -153,7 +153,7 @@ describe("validateBracketPicks — structural errors", () => {
       { roundNumber: 1, matches: [] },
       {
         roundNumber: 2,
-        matches: [{ id: "m1", matchNumber: 1, status: "PENDING", slots: [] }],
+        matches: [{ id: "m1", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] }],
       },
     ];
     const result = validateBracketPicks({
@@ -212,14 +212,14 @@ describe("validateBracketPicks — late joiner", () => {
       {
         roundNumber: 1,
         matches: [
-          { id: "m1", matchNumber: 1, status: "COMPLETE", slots: makeSlots(["A", "B"]) },
-          { id: "m2", matchNumber: 2, status: "COMPLETE", slots: makeSlots(["C", "D"]) },
+          { id: "m1", matchNumber: 1, status: "COMPLETE", winnerId: "A", slots: makeSlots(["A", "B"]) },
+          { id: "m2", matchNumber: 2, status: "COMPLETE", winnerId: "C", slots: makeSlots(["C", "D"]) },
         ],
       },
       {
         roundNumber: 2,
         matches: [
-          { id: "m3", matchNumber: 1, status: "PENDING", slots: makeSlots(["A", "C"]) },
+          { id: "m3", matchNumber: 1, status: "PENDING", winnerId: null, slots: makeSlots(["A", "C"]) },
         ],
       },
     ];
@@ -237,14 +237,14 @@ describe("validateBracketPicks — late joiner", () => {
       {
         roundNumber: 1,
         matches: [
-          { id: "m1", matchNumber: 1, status: "COMPLETE", slots: makeSlots(["A", "B"]) },
-          { id: "m2", matchNumber: 2, status: "COMPLETE", slots: makeSlots(["C", "D"]) },
+          { id: "m1", matchNumber: 1, status: "COMPLETE", winnerId: "A", slots: makeSlots(["A", "B"]) },
+          { id: "m2", matchNumber: 2, status: "COMPLETE", winnerId: "C", slots: makeSlots(["C", "D"]) },
         ],
       },
       {
         roundNumber: 2,
         matches: [
-          { id: "m3", matchNumber: 1, status: "PENDING", slots: makeSlots(["A", "C"]) },
+          { id: "m3", matchNumber: 1, status: "PENDING", winnerId: null, slots: makeSlots(["A", "C"]) },
         ],
       },
     ];
@@ -262,22 +262,22 @@ describe("validateBracketPicks — late joiner", () => {
       {
         roundNumber: 1,
         matches: [
-          { id: "m1", matchNumber: 1, status: "COMPLETE", slots: makeSlots(["A", "H"]) },
-          { id: "m2", matchNumber: 2, status: "COMPLETE", slots: makeSlots(["E", "D"]) },
-          { id: "m3", matchNumber: 3, status: "COMPLETE", slots: makeSlots(["C", "F"]) },
-          { id: "m4", matchNumber: 4, status: "COMPLETE", slots: makeSlots(["G", "B"]) },
+          { id: "m1", matchNumber: 1, status: "COMPLETE", winnerId: "A", slots: makeSlots(["A", "H"]) },
+          { id: "m2", matchNumber: 2, status: "COMPLETE", winnerId: "E", slots: makeSlots(["E", "D"]) },
+          { id: "m3", matchNumber: 3, status: "COMPLETE", winnerId: "C", slots: makeSlots(["C", "F"]) },
+          { id: "m4", matchNumber: 4, status: "COMPLETE", winnerId: "G", slots: makeSlots(["G", "B"]) },
         ],
       },
       {
         roundNumber: 2,
         matches: [
-          { id: "m5", matchNumber: 1, status: "PENDING", slots: makeSlots(["A", "E"]) },
-          { id: "m6", matchNumber: 2, status: "PENDING", slots: makeSlots(["C", "G"]) },
+          { id: "m5", matchNumber: 1, status: "PENDING", winnerId: null, slots: makeSlots(["A", "E"]) },
+          { id: "m6", matchNumber: 2, status: "PENDING", winnerId: null, slots: makeSlots(["C", "G"]) },
         ],
       },
       {
         roundNumber: 3,
-        matches: [{ id: "m7", matchNumber: 1, status: "PENDING", slots: [] }],
+        matches: [{ id: "m7", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] }],
       },
     ];
 
@@ -291,5 +291,58 @@ describe("validateBracketPicks — late joiner", () => {
       joinedAtRound: 2,
     });
     expect(result.valid).toBe(true);
+  });
+
+  it("accepts late joiner at round 1 when some round-1 matches are already complete", () => {
+    const rounds: Round[] = [
+      {
+        roundNumber: 1,
+        matches: [
+          { id: "m1", matchNumber: 1, status: "COMPLETE", winnerId: "A", slots: makeSlots(["A", "B"]) },
+          { id: "m2", matchNumber: 2, status: "PENDING", winnerId: null, slots: makeSlots(["C", "D"]) },
+        ],
+      },
+      {
+        roundNumber: 2,
+        matches: [{ id: "m3", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] }],
+      },
+    ];
+
+    const result = validateBracketPicks({
+      picks: [
+        { matchId: "m2", pickedItemId: "C" },
+        { matchId: "m3", pickedItemId: "A" },
+      ],
+      rounds,
+      joinedAtRound: 1,
+    });
+    expect(result.valid).toBe(true);
+  });
+
+  it("rejects late joiner at round 1 picking a non-winner from a complete feeder match", () => {
+    const rounds: Round[] = [
+      {
+        roundNumber: 1,
+        matches: [
+          { id: "m1", matchNumber: 1, status: "COMPLETE", winnerId: "A", slots: makeSlots(["A", "B"]) },
+          { id: "m2", matchNumber: 2, status: "PENDING", winnerId: null, slots: makeSlots(["C", "D"]) },
+        ],
+      },
+      {
+        roundNumber: 2,
+        matches: [{ id: "m3", matchNumber: 1, status: "PENDING", winnerId: null, slots: [] }],
+      },
+    ];
+
+    const result = validateBracketPicks({
+      picks: [
+        { matchId: "m2", pickedItemId: "C" },
+        { matchId: "m3", pickedItemId: "B" },
+      ],
+      rounds,
+      joinedAtRound: 1,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.error).toMatch(/cascade/i);
   });
 });

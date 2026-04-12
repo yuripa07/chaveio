@@ -11,7 +11,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { augmentRounds, clearDownstream } from "@/lib/bracket-client";
 import { translateApiError } from "@/lib/translate-api-error";
 import { cn } from "@/lib/cn";
-import { TournamentStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
+import { TournamentStatus, MatchStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
 import BracketView from "@/components/bracket-view";
 import { BracketPageSkeleton } from "@/components/page-spinner";
 import { TournamentHeader } from "@/components/tournament-header";
@@ -217,7 +217,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     for (const round of augmented) {
       if (round.roundNumber < startRound) continue;
       for (const match of round.matches) {
-        if (match.slots.length >= 2) {
+        if (match.slots.length >= 2 && match.status !== MatchStatus.COMPLETE) {
           eligible++;
           if (picks[match.id]) picked++;
         }

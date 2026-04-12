@@ -130,6 +130,27 @@ describe("augmentRounds", () => {
 
     expect(result[1].matches[0].slots).toHaveLength(0);
   });
+
+  it("uses winnerId from a complete feeder match when user has no pick for it", () => {
+    const rounds = make4ItemRounds();
+    rounds[0].matches[0] = { ...rounds[0].matches[0], status: "COMPLETE", winnerId: "A" };
+    const result = augmentRounds(rounds, { m2: "C" }, 1);
+
+    const r2m1 = result[1].matches[0];
+    expect(r2m1.slots).toHaveLength(2);
+    expect(r2m1.slots.find((s) => s.position === 1)?.itemId).toBe("A");
+    expect(r2m1.slots.find((s) => s.position === 2)?.itemId).toBe("C");
+  });
+
+  it("does not discard a partial real DB slot when the other feeder is pending and unpicked", () => {
+    const rounds = make4ItemRounds();
+    rounds[0].matches[0] = { ...rounds[0].matches[0], status: "COMPLETE", winnerId: "A" };
+    rounds[1].matches[0].slots = [{ id: "real1", itemId: "A", position: 1 }];
+
+    const r2m1 = augmentRounds(rounds, {}, 1)[1].matches[0];
+    expect(r2m1.slots).toHaveLength(1);
+    expect(r2m1.slots[0].itemId).toBe("A");
+  });
 });
 
 describe("clearDownstream", () => {

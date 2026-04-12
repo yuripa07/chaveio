@@ -1,7 +1,8 @@
 import { getFeederMatches } from "@/lib/bracket";
+import { MatchStatus } from "@/constants/tournament";
 
 type Slot = { itemId: string; position: number };
-type Match = { id: string; matchNumber: number; status: string; slots: Slot[] };
+type Match = { id: string; matchNumber: number; status: string; winnerId: string | null; slots: Slot[] };
 type Round = { roundNumber: number; matches: Match[] };
 
 type Pick = { matchId: string; pickedItemId: string };
@@ -44,7 +45,8 @@ export function validateBracketPicks(params: {
 
   const requiredMatches = rounds
     .filter((r) => r.roundNumber >= startRound)
-    .flatMap((r) => r.matches.map((m) => ({ ...m, roundNumber: r.roundNumber })));
+    .flatMap((r) => r.matches.map((m) => ({ ...m, roundNumber: r.roundNumber })))
+    .filter((m) => m.status !== MatchStatus.COMPLETE);
 
   for (const match of requiredMatches) {
     if (!pickMap.has(match.id)) {
@@ -59,7 +61,6 @@ export function validateBracketPicks(params: {
     const pickedItemId = pickMap.get(match.id)!;
 
     if (match.roundNumber === startRound) {
-      // Start round: item must be in actual match slots
       const slotItems = match.slots.map((s) => s.itemId);
       if (!slotItems.includes(pickedItemId)) {
         return {
@@ -68,7 +69,6 @@ export function validateBracketPicks(params: {
         };
       }
     } else {
-      // Later round: item must cascade from one of the two feeder matches
       const [feeder1Num, feeder2Num] = getFeederMatches(match.matchNumber);
       const prevRoundNumber = match.roundNumber - 1;
 
@@ -79,8 +79,8 @@ export function validateBracketPicks(params: {
         return { valid: false, error: `Could not find feeder matches for match ${match.id}.` };
       }
 
-      const pick1 = pickMap.get(feeder1.id);
-      const pick2 = pickMap.get(feeder2.id);
+      const pick1 = feeder1.winnerId ?? pickMap.get(feeder1.id);
+      const pick2 = feeder2.winnerId ?? pickMap.get(feeder2.id);
 
       const validPredecessors = new Set<string>();
       if (pick1) validPredecessors.add(pick1);

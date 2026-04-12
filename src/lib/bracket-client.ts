@@ -22,8 +22,8 @@ export function augmentRounds(
       const [feeder1Num, feeder2Num] = getFeederMatches(match.matchNumber);
       const feeder1 = previousRound.matches.find((m) => m.matchNumber === feeder1Num);
       const feeder2 = previousRound.matches.find((m) => m.matchNumber === feeder2Num);
-      const pick1 = feeder1 ? picks[feeder1.id] : null;
-      const pick2 = feeder2 ? picks[feeder2.id] : null;
+      const pick1 = feeder1 ? (feeder1.winnerId ?? picks[feeder1.id] ?? null) : null;
+      const pick2 = feeder2 ? (feeder2.winnerId ?? picks[feeder2.id] ?? null) : null;
       const virtualSlots: MatchSlot[] = [];
       if (pick1) virtualSlots.push({ id: `v-${match.id}-1`, itemId: pick1, position: 1 });
       if (pick2) virtualSlots.push({ id: `v-${match.id}-2`, itemId: pick2, position: 2 });
