@@ -41,7 +41,7 @@ export default function BracketView({
   const totalRounds = rounds.length;
   const finalRound = rounds[totalRounds - 1];
   const finalMatch = finalRound.matches[0];
-  const championId = finalMatch?.winnerId ?? (finalMatch ? picks[finalMatch.id] : undefined);
+  const championId = finalMatch?.winnerId ?? (mode !== "view" && finalMatch ? picks[finalMatch.id] : undefined);
   const champion = championId ? itemMap[championId] : null;
   const finalMatchHeight = BRACKET_BASE_HEIGHT * Math.pow(2, totalRounds - 1);
 
