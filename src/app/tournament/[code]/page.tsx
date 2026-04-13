@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft, X } from "lucide-react";
+import { User, Lock, LogIn, CheckCircle2, Hash, Trophy, Copy, Check, Eye, EyeOff, ChevronLeft, X, Shield } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { translateApiError } from "@/lib/translate-api-error";
 import { usePolling } from "@/hooks/use-polling";
@@ -12,6 +12,7 @@ import { INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/constants/styles";
 import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
 import { BackLink } from "@/components/back-link";
 import { ErrorAlert } from "@/components/error-alert";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { KickParticipantDialog } from "@/components/kick-participant-dialog";
 import { LobbyCTA } from "@/components/lobby-cta";
 import { LobbyPageSkeleton } from "@/components/page-spinner";
@@ -19,25 +20,47 @@ import { ParticipantAvatar } from "@/components/participant-avatar";
 import { SectionHeader } from "@/components/section-header";
 import { Spinner } from "@/components/spinner";
 import { useLocale } from "@/contexts/locale-context";
+import { useUser } from "@/contexts/user-context";
 import type { Participant, TournamentState } from "@/types/tournament";
+
+type TournamentAuthMode = "PASSWORD" | "GOOGLE";
+
+type CheckResponse = {
+  exists: boolean;
+  status?: string;
+  authMode?: TournamentAuthMode;
+};
 
 export default function TournamentLobby({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const { t } = useLocale();
+  const { user, ready: userReady } = useUser();
   const router = useRouter();
   const { token, tokenReady, participantId, isCreator, setTokenFromResponse, clearToken } = useTournamentToken(code);
 
   const [tournamentData, setTournamentData] = useState<TournamentState | null>(null);
+  const [authMode, setAuthMode] = useState<TournamentAuthMode | null>(null);
+  const [tournamentMissing, setTournamentMissing] = useState(false);
   const [joinName, setJoinName] = useState("");
   const [joinPassword, setJoinPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [joining, setJoining] = useState(false);
+  const [autoJoinError, setAutoJoinError] = useState("");
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [kickTarget, setKickTarget] = useState<Participant | null>(null);
   const [kicking, setKicking] = useState(false);
   const [kickError, setKickError] = useState("");
+
+  const [linkPanelOpen, setLinkPanelOpen] = useState(false);
+  const [linkPassword, setLinkPassword] = useState("");
+  const [linkShowPassword, setLinkShowPassword] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState("");
+  const [linkSuccess, setLinkSuccess] = useState(false);
+
+  const autoJoinTriedRef = useRef(false);
 
   const fetchState = useCallback(async (authToken: string, signal?: AbortSignal) => {
     const response = await fetch(`/api/tournaments/${code}`, {
@@ -58,6 +81,27 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     else if (status === TournamentStatus.FINISHED)
       router.replace(`/tournament/${code}/results`);
   }
+
+  // Fetch authMode (public) — drives the unauthenticated branch
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/tournaments/${code}/check`)
+      .then(async (response) => {
+        if (cancelled) return;
+        if (response.status === 404) {
+          setTournamentMissing(true);
+          return;
+        }
+        if (!response.ok) return;
+        const body = (await response.json()) as CheckResponse;
+        if (cancelled) return;
+        if (body.authMode === "PASSWORD" || body.authMode === "GOOGLE") {
+          setAuthMode(body.authMode);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [code]);
 
   // Initial load
   useEffect(() => {
@@ -82,6 +126,44 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     !!token && tournamentData?.tournament.status === TournamentStatus.LOBBY
   );
 
+  // Auto-join for GOOGLE-mode tournaments when a session exists but no tournament token
+  useEffect(() => {
+    if (!tokenReady || !userReady) return;
+    if (token) return;
+    if (authMode !== "GOOGLE") return;
+    if (!user) return;
+    if (autoJoinTriedRef.current) return;
+    autoJoinTriedRef.current = true;
+
+    (async () => {
+      setJoining(true);
+      setAutoJoinError("");
+      try {
+        const response = await fetch(`/api/tournaments/${code}/join`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          setAutoJoinError(translateApiError(body.error, t) ?? t.lobby.joinFailed);
+          return;
+        }
+        setTokenFromResponse(code, body.token);
+        const data = await fetchState(body.token);
+        if (data) {
+          setTournamentData(data);
+          redirectByStatus(data.tournament.status, isCreator);
+        }
+      } catch {
+        setAutoJoinError(t.common.networkError);
+      } finally {
+        setJoining(false);
+      }
+    })();
+  }, [tokenReady, userReady, token, authMode, user, code, t, fetchState, setTokenFromResponse, isCreator]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleJoin(event: React.FormEvent) {
     event.preventDefault();
     setJoinError("");
@@ -89,6 +171,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     try {
       const response = await fetch(`/api/tournaments/${code}/join`, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ displayName: joinName, password: joinPassword }),
       });
@@ -153,9 +236,58 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
     }
   }
 
-  if (!tokenReady) return <LobbyPageSkeleton />;
+  async function handleLinkGoogle(event: React.FormEvent) {
+    event.preventDefault();
+    const targetName = tournamentData?.participants.find((p) => p.id === participantId)?.displayName;
+    if (!targetName) return;
+    setLinkError("");
+    setLinking(true);
+    try {
+      const response = await fetch(`/api/tournaments/${code}/link-google`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: targetName, password: linkPassword }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        setLinkError(translateApiError(body.error, t) ?? t.lobby.joinFailed);
+        return;
+      }
+      if (body.token) setTokenFromResponse(code, body.token);
+      setLinkSuccess(true);
+      setLinkPassword("");
+      setLinkPanelOpen(false);
+      const nextToken = body.token ?? token;
+      if (nextToken) {
+        const data = await fetchState(nextToken);
+        if (data) setTournamentData(data);
+      }
+    } catch {
+      setLinkError(t.common.networkError);
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  if (!tokenReady || !userReady) return <LobbyPageSkeleton />;
+
+  if (tournamentMissing) {
+    return (
+      <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+        <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
+          <BackLink href="/" label={t.common.home} />
+        </div>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <ErrorAlert message={t.landing.tournamentNotFound(code)} />
+        </div>
+      </main>
+    );
+  }
 
   if (!token) {
+    const waitingAuthMode = authMode === null;
+
     return (
       <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
         <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
@@ -170,68 +302,115 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               </div>
               <h1 className="text-2xl font-extrabold tracking-tight">{t.lobby.joinTitle}</h1>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                {t.lobby.joinSubtitle}
+                {authMode === "GOOGLE" ? t.auth.signInToJoin : t.lobby.joinSubtitle}
               </p>
             </div>
 
-            <form onSubmit={handleJoin} className="space-y-3">
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  placeholder={t.lobby.yourNameOnScore}
-                  aria-label={t.lobby.yourNameOnScore}
-                  value={joinName}
-                  onChange={(event) => setJoinName(event.target.value)}
-                  required
-                  autoFocus
-                  autoComplete="name"
-                  className={cn(INPUT_CLASS, "pl-10 py-3")}
-                />
+            {waitingAuthMode && (
+              <div className="flex justify-center">
+                <Spinner size="md" />
               </div>
+            )}
 
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder={t.lobby.passwordLabel}
-                  aria-label={t.lobby.passwordLabel}
-                  value={joinPassword}
-                  onChange={(event) => setJoinPassword(event.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className={cn(INPUT_CLASS, "pl-10 pr-10 py-3")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                  aria-label={showPassword ? t.common.hidePassword : t.common.showPassword}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {authMode === "GOOGLE" && !user && (
+              <div className="space-y-3">
+                <GoogleSignInButton returnTo={`/tournament/${code}`} />
               </div>
+            )}
 
-              {joinError && <ErrorAlert message={joinError} />}
-
-              <button
-                type="submit"
-                disabled={joining || !joinName.trim() || !joinPassword}
-                className={cn("flex items-center justify-center gap-2", PRIMARY_BUTTON_CLASS)}
-              >
+            {authMode === "GOOGLE" && user && (
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 text-sm text-zinc-600 dark:text-zinc-300">
                 {joining ? (
                   <>
-                    <Spinner size="sm" />
-                    {t.lobby.joining}
+                    <Spinner size="md" />
+                    <span>{t.auth.joiningAuto}</span>
                   </>
+                ) : autoJoinError ? (
+                  <ErrorAlert message={autoJoinError} />
                 ) : (
+                  <Spinner size="md" />
+                )}
+              </div>
+            )}
+
+            {authMode === "PASSWORD" && (
+              <>
+                <form onSubmit={handleJoin} className="space-y-3">
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder={t.lobby.yourNameOnScore}
+                      aria-label={t.lobby.yourNameOnScore}
+                      value={joinName}
+                      onChange={(event) => setJoinName(event.target.value)}
+                      required
+                      autoFocus
+                      autoComplete="name"
+                      className={cn(INPUT_CLASS, "pl-10 py-3")}
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder={t.lobby.passwordLabel}
+                      aria-label={t.lobby.passwordLabel}
+                      value={joinPassword}
+                      onChange={(event) => setJoinPassword(event.target.value)}
+                      required
+                      autoComplete="current-password"
+                      className={cn(INPUT_CLASS, "pl-10 pr-10 py-3")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                      aria-label={showPassword ? t.common.hidePassword : t.common.showPassword}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+
+                  {joinError && <ErrorAlert message={joinError} />}
+
+                  <button
+                    type="submit"
+                    disabled={joining || !joinName.trim() || !joinPassword}
+                    className={cn("flex items-center justify-center gap-2", PRIMARY_BUTTON_CLASS)}
+                  >
+                    {joining ? (
+                      <>
+                        <Spinner size="sm" />
+                        {t.lobby.joining}
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="h-4 w-4" />
+                        {t.lobby.joinButton}
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {!user && (
                   <>
-                    <LogIn className="h-4 w-4" />
-                    {t.lobby.joinButton}
+                    <div className="relative py-1">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-zinc-100 dark:border-zinc-800" />
+                      </div>
+                      <div className="relative flex justify-center">
+                        <span className="bg-zinc-50 dark:bg-zinc-950 px-3 text-xs text-zinc-400 dark:text-zinc-500">
+                          {t.landing.orEnterCode}
+                        </span>
+                      </div>
+                    </div>
+                    <GoogleSignInButton variant="secondary" returnTo={`/tournament/${code}`} />
                   </>
                 )}
-              </button>
-            </form>
+              </>
+            )}
           </div>
         </div>
       </main>
@@ -241,6 +420,12 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   if (!tournamentData) return <LobbyPageSkeleton />;
 
   const { tournament, participants, items } = tournamentData;
+  const currentParticipant = participants.find((p) => p.id === participantId);
+  const canProtectWithGoogle =
+    tournament.authMode === "PASSWORD" &&
+    !!user &&
+    !!currentParticipant &&
+    !currentParticipant.userId;
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
@@ -290,6 +475,84 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               {copied ? t.lobby.copied : t.lobby.copyLink}
             </button>
           </div>
+
+          {canProtectWithGoogle && (
+            <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900 bg-indigo-50/60 dark:bg-indigo-950/40 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900">
+                  <Shield className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">{t.auth.protectWithGoogle}</p>
+                    <p className="text-xs text-indigo-700 dark:text-indigo-300">{t.auth.protectWithGoogleDescription}</p>
+                  </div>
+                  {linkSuccess ? (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {t.auth.protectSuccess}
+                    </div>
+                  ) : linkPanelOpen ? (
+                    <form onSubmit={handleLinkGoogle} className="space-y-2">
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                        <input
+                          type={linkShowPassword ? "text" : "password"}
+                          value={linkPassword}
+                          onChange={(event) => setLinkPassword(event.target.value)}
+                          placeholder={t.auth.protectPasswordLabel}
+                          aria-label={t.auth.protectPasswordLabel}
+                          required
+                          autoComplete="current-password"
+                          className={cn(INPUT_CLASS, "pl-10 pr-10 py-2 text-sm")}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setLinkShowPassword((prev) => !prev)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                          aria-label={linkShowPassword ? t.common.hidePassword : t.common.showPassword}
+                        >
+                          {linkShowPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {linkError && <ErrorAlert message={linkError} />}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { setLinkPanelOpen(false); setLinkPassword(""); setLinkError(""); }}
+                          className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                        >
+                          {t.common.cancel}
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={linking || !linkPassword}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 active:scale-[.98] transition disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {linking ? (
+                            <>
+                              <Spinner size="sm" />
+                              {t.auth.protectSubmitting}
+                            </>
+                          ) : (
+                            t.auth.protectSubmit
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setLinkPanelOpen(true)}
+                      className="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 active:scale-[.98] transition"
+                    >
+                      {t.auth.protectWithGoogle}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
@@ -354,7 +617,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               code={code}
               participants={participants}
               isCreator={isCreator}
-              hasSubmittedPicks={participants.find((p) => p.id === participantId)?.hasSubmittedPicks ?? false}
+              hasSubmittedPicks={currentParticipant?.hasSubmittedPicks ?? false}
               starting={starting}
               onStart={handleStart}
             />

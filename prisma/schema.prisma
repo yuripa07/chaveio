@@ -7,21 +7,41 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id            String    @id @default(cuid())
+  googleSub     String    @unique
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  name          String?
+  avatarUrl     String?
+  locale        String?
+  tier          String    @default("FREE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  participants       Participant[]
+  tournamentsCreated Tournament[]  @relation("TournamentCreator")
+}
+
 model Tournament {
-  id           String    @id @default(cuid())
-  code         String    @unique
-  name         String
-  passwordHash String
-  roundNames   String    @default("[]")
-  status       String    @default("LOBBY")
-  createdAt  DateTime  @default(now())
-  startedAt  DateTime?
-  endedAt    DateTime?
+  id            String    @id @default(cuid())
+  code          String    @unique
+  name          String
+  passwordHash  String?
+  authMode      String    @default("PASSWORD")
+  creatorUserId String?
+  roundNames    String    @default("[]")
+  status        String    @default("LOBBY")
+  createdAt     DateTime  @default(now())
+  startedAt     DateTime?
+  endedAt       DateTime?
 
   items        TournamentItem[]
   participants Participant[]
   matches      Match[]
   rounds       Round[]
+  creator      User?            @relation("TournamentCreator", fields: [creatorUserId], references: [id], onDelete: SetNull)
 }
 
 model TournamentItem {
@@ -38,15 +58,18 @@ model TournamentItem {
 model Participant {
   id                String  @id @default(cuid())
   tournamentId      String
+  userId            String?
   displayName       String
   isCreator         Boolean @default(false)
   hasSubmittedPicks Boolean @default(false)
   joinedAtRound     Int?
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   picks      Pick[]
 
   @@unique([tournamentId, displayName])
+  @@unique([tournamentId, userId])
 }
 
 model Round {

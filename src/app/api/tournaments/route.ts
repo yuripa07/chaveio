@@ -1,32 +1,29 @@
 import { NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { generateCode } from "@/lib/codes";
 import { signToken } from "@/lib/auth";
 import { generateFirstRoundPairs } from "@/lib/bracket";
 import { computeRoundPoints } from "@/lib/points";
+import { handleUserRequest } from "@/lib/api-utils";
 
 function isPowerOfTwo(n: number) {
   return n >= 4 && n <= 32 && (n & (n - 1)) === 0;
 }
 
+interface CreateBody {
+  name?: string;
+  items?: string[];
+  roundNames?: string[];
+}
+
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid request body." }, { status: 400 });
-  }
+  const result = await handleUserRequest<CreateBody>(req, { parseBody: true });
+  if (!result.ok) return result.response;
+  const { session, body } = result;
 
-  const { name, items, creatorName, creatorPassword, roundNames } = body as {
-    name: string;
-    items: string[];
-    creatorName: string;
-    creatorPassword: string;
-    roundNames?: string[];
-  };
+  const { name, items, roundNames } = body;
 
-  if (!name || !creatorName || !creatorPassword) {
+  if (!name) {
     return Response.json({ error: "Required fields are missing." }, { status: 400 });
   }
 
@@ -45,8 +42,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Start hash immediately, generate code in parallel
-  const hashPromise = bcrypt.hash(creatorPassword, 10);
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { id: true, name: true },
+  });
+  if (!user) {
+    return Response.json({ error: "Sign in required." }, { status: 401 });
+  }
 
   let code = "";
   for (let i = 0; i < 5; i++) {
@@ -61,14 +63,16 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Failed to generate tournament code." }, { status: 500 });
   }
 
-  const passwordHash = await hashPromise;
+  const creatorDisplayName = user.name ?? "Organizador";
 
   const tournament = await prisma.$transaction(async (tx) => {
     const newTournament = await tx.tournament.create({
       data: {
         code,
         name,
-        passwordHash,
+        passwordHash: null,
+        authMode: "GOOGLE",
+        creatorUserId: user.id,
         roundNames: JSON.stringify(roundNames ?? []),
         items: {
           create: items.map((itemName, i) => ({ name: itemName, seed: i + 1 })),
@@ -80,12 +84,12 @@ export async function POST(req: NextRequest) {
     const participant = await tx.participant.create({
       data: {
         tournamentId: newTournament.id,
-        displayName: creatorName,
+        userId: user.id,
+        displayName: creatorDisplayName,
         isCreator: true,
       },
     });
 
-    // Generate bracket at creation so participants can predict before start
     const n = newTournament.items.length;
     const numRounds = Math.log2(n);
     const pairs = generateFirstRoundPairs(n);
@@ -109,7 +113,6 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // Round 1 matches with seeded slots
     await Promise.all(
       pairs.map(([seed1, seed2], i) => {
         const item1 = newTournament.items.find((it) => it.seed === seed1)!;
@@ -130,7 +133,6 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // Empty matches for rounds 2+
     for (let r = 1; r < numRounds; r++) {
       const matchCount = n / Math.pow(2, r + 1);
       await Promise.all(

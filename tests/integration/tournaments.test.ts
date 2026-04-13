@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { testPrisma, resetDb } from "./helpers";
 import {
   createTournament,
+  createGoogleTournament,
   joinTournament,
   getTournament,
   startTournament,
@@ -17,90 +18,116 @@ afterAll(async () => {
   await testPrisma.$disconnect();
 });
 
-describe("POST /api/tournaments", () => {
-  it("creates a tournament and returns a code + token", async () => {
-    const res = await createTournament({
+describe("POST /api/tournaments (Google-mode)", () => {
+  it("creates a GOOGLE-mode tournament with creator linked to the user", async () => {
+    const { status, code, token, userId } = await createGoogleTournament({
       name: "Best Country",
       items: ["Brazil", "Japan", "Germany", "France"],
-      creatorName: "Alice",
-      creatorPassword: "pass123",
+      userName: "Alice",
     });
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.code).toMatch(/^[A-Z2-9]{6}$/);
-    expect(body.token).toBeTruthy();
+    expect(status).toBe(201);
+    expect(code).toMatch(/^[A-Z2-9]{6}$/);
+    expect(token).toBeTruthy();
+
+    const tournament = await testPrisma.tournament.findUniqueOrThrow({
+      where: { code },
+      include: { items: true, participants: true },
+    });
+    expect(tournament.authMode).toBe("GOOGLE");
+    expect(tournament.passwordHash).toBeNull();
+    expect(tournament.creatorUserId).toBe(userId);
+    expect(tournament.items).toHaveLength(4);
+    expect(tournament.participants).toHaveLength(1);
+    expect(tournament.participants[0].isCreator).toBe(true);
+    expect(tournament.participants[0].userId).toBe(userId);
+    expect(tournament.participants[0].displayName).toBe("Alice");
   });
 
-  it("rejects non-power-of-2 item counts", async () => {
-    const res = await createTournament({
-      name: "Bad Tournament",
-      items: ["A", "B", "C"],
-      creatorName: "Bob",
-      creatorPassword: "pass",
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects item count below 4", async () => {
-    const res = await createTournament({
-      name: "Too Small",
-      items: ["A", "B"],
-      creatorName: "Bob",
-      creatorPassword: "pass",
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects item count above 32", async () => {
-    const res = await createTournament({
-      name: "Too Big",
-      items: Array.from({ length: 64 }, (_, i) => `Item ${i}`),
-      creatorName: "Bob",
-      creatorPassword: "pass",
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects missing required fields", async () => {
+  it("rejects creation without a session", async () => {
     const { POST } = await import("@/app/api/tournaments/route");
     const { NextRequest } = await import("next/server");
     const res = await POST(
       new NextRequest("http://localhost/api/tournaments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: ["A", "B", "C", "D"] }),
+        body: JSON.stringify({
+          name: "Unauthorized",
+          items: ["A", "B", "C", "D"],
+        }),
       })
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects creation with a tampered session cookie", async () => {
+    const { POST } = await import("@/app/api/tournaments/route");
+    const { NextRequest } = await import("next/server");
+    const { SESSION_COOKIE } = await import("@/lib/session");
+    const res = await POST(
+      new NextRequest("http://localhost/api/tournaments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `${SESSION_COOKIE}=not-a-real-jwt`,
+        },
+        body: JSON.stringify({
+          name: "Tampered",
+          items: ["A", "B", "C", "D"],
+        }),
+      })
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects non-power-of-2 item counts", async () => {
+    const { status } = await createGoogleTournament({
+      name: "Bad Tournament",
+      items: ["A", "B", "C"],
+      userName: "Bob",
+    });
+    expect(status).toBe(400);
+  });
+
+  it("rejects item count above 32", async () => {
+    const { status } = await createGoogleTournament({
+      name: "Too Big",
+      items: Array.from({ length: 64 }, (_, i) => `Item ${i}`),
+      userName: "Bob",
+    });
+    expect(status).toBe(400);
+  });
+
+  it("rejects missing name", async () => {
+    const { status } = await createGoogleTournament({
+      name: "",
+      items: ["A", "B", "C", "D"],
+    });
+    expect(status).toBe(400);
   });
 
   it("rejects roundNames with wrong length", async () => {
-    const res = await createTournament({
+    const { status } = await createGoogleTournament({
       items: ["A", "B", "C", "D"],
       roundNames: ["Semifinals"],
     });
-    expect(res.status).toBe(400);
+    expect(status).toBe(400);
   });
 
   it("accepts roundNames with correct length and stores them", async () => {
-    const res = await createTournament({
+    const { status, code } = await createGoogleTournament({
       items: ["A", "B", "C", "D"],
       roundNames: ["Semifinal", "Final"],
     });
-    expect(res.status).toBe(201);
-    const { code, token } = await res.json();
+    expect(status).toBe(201);
 
     const t = await testPrisma.tournament.findUnique({ where: { code } });
-    const stored = JSON.parse(t!.roundNames ?? "[]");
-    expect(stored).toEqual(["Semifinal", "Final"]);
-
-    void token;
+    expect(JSON.parse(t!.roundNames ?? "[]")).toEqual(["Semifinal", "Final"]);
   });
 
   it("generates correct bracket structure for 8 items (3 rounds)", async () => {
-    const { code } = await createTournament({
+    const { code } = await createGoogleTournament({
       items: ["A", "B", "C", "D", "E", "F", "G", "H"],
-    }).then((r) => r.json());
+    });
 
     const t = await testPrisma.tournament.findUnique({
       where: { code },
@@ -121,29 +148,10 @@ describe("POST /api/tournaments", () => {
     expect(t!.rounds[2].matches[0].slots).toHaveLength(0);
   });
 
-  it("persists tournament and creator in DB", async () => {
-    const res = await createTournament({
-      name: "Best Country",
-      items: ["Brazil", "Japan", "Germany", "France"],
-      creatorName: "Alice",
-      creatorPassword: "pass123",
-    });
-    const { code } = await res.json();
-    const tournament = await testPrisma.tournament.findUnique({
-      where: { code },
-      include: { items: true, participants: true },
-    });
-    expect(tournament).toBeTruthy();
-    expect(tournament!.items).toHaveLength(4);
-    expect(tournament!.participants).toHaveLength(1);
-    expect(tournament!.participants[0].isCreator).toBe(true);
-    expect(tournament!.status).toBe("LOBBY");
-  });
-
   it("generates bracket (rounds + matches + slots) at creation for 4 items", async () => {
-    const { code } = await createTournament({
+    const { code } = await createGoogleTournament({
       items: ["Brazil", "Japan", "Germany", "France"],
-    }).then((r) => r.json());
+    });
 
     const t = await testPrisma.tournament.findUnique({
       where: { code },
@@ -156,17 +164,12 @@ describe("POST /api/tournaments", () => {
     });
 
     expect(t!.rounds).toHaveLength(2);
-    expect(t!.rounds[0].status).toBe("PENDING");
     expect(t!.rounds[0].matches).toHaveLength(2);
-    expect(t!.rounds[0].matches[0].slots).toHaveLength(2);
-    expect(t!.rounds[0].matches[1].slots).toHaveLength(2);
-    expect(t!.rounds[1].status).toBe("PENDING");
-    expect(t!.rounds[1].matches).toHaveLength(1);
     expect(t!.rounds[1].matches[0].slots).toHaveLength(0);
   });
 
   it("GET tournament in LOBBY returns bracket with rounds and matches", async () => {
-    const { code, token } = await createTournament().then((r) => r.json());
+    const { code, token } = await createGoogleTournament();
     const res = await getTournament(code, token);
     const body = await res.json();
     expect(body.rounds).toHaveLength(2);

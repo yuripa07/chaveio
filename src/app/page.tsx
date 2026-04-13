@@ -1,25 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PlusCircle, LogIn, Trophy, AlertCircle } from "lucide-react";
 import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 import { Spinner } from "@/components/spinner";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { UserChip } from "@/components/user-chip";
 import { cn } from "@/lib/cn";
 import { useLocale } from "@/contexts/locale-context";
+import { useUser } from "@/contexts/user-context";
 
 // No `g` flag — avoids stale lastIndex when calling .test() repeatedly
 const VALID_CODE_CHARS = /[^A-Z2-9]/g;
 const AMBIGUOUS_CHARS = /[01IO]/i;
 
 export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLocale();
+  const { user, ready } = useUser();
   const [code, setCode] = useState("");
   const [codeHint, setCodeHint] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const err = searchParams.get("auth_error");
+    if (!err) return;
+    if (err === "flow_expired" || err === "invalid_callback") {
+      setAuthError(t.auth.oauthExpired);
+    } else {
+      setAuthError(t.auth.oauthFailed);
+    }
+  }, [searchParams, t]);
 
   function handleCodeChange(event: React.ChangeEvent<HTMLInputElement>) {
     const raw = event.target.value.toUpperCase();
@@ -28,7 +52,6 @@ export default function Home() {
     } else {
       setCodeHint(null);
     }
-    // Enforce max length here too (mobile keyboards can bypass the `maxLength` attr)
     setCode(raw.replace(VALID_CODE_CHARS, "").slice(0, TOURNAMENT_CODE_LENGTH));
     setCodeError(null);
   }
@@ -58,27 +81,45 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col">
+      <header className="absolute right-4 top-4 z-10">
+        {ready && user ? <UserChip /> : null}
+      </header>
+
       <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-6 py-24">
         <div className="w-full max-w-sm space-y-10 text-center">
-
           <div className="flex flex-col items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-none">
               <Trophy className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">Chaveio</h1>
-              <p className="mt-1.5 text-base text-zinc-500 dark:text-zinc-400">{t.landing.tagline}</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Chaveio
+              </h1>
+              <p className="mt-1.5 text-base text-zinc-500 dark:text-zinc-400">
+                {t.landing.tagline}
+              </p>
             </div>
           </div>
 
+          {authError && (
+            <div className="flex items-start gap-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{authError}</span>
+            </div>
+          )}
+
           <div className="space-y-3">
-            <Link
-              href="/tournament/new"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition"
-            >
-              <PlusCircle className="h-4 w-4" />
-              {t.landing.createTournament}
-            </Link>
+            {ready && !user ? (
+              <GoogleSignInButton returnTo="/" />
+            ) : (
+              <Link
+                href="/tournament/new"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition"
+              >
+                <PlusCircle className="h-4 w-4" />
+                {t.landing.createTournament}
+              </Link>
+            )}
 
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">

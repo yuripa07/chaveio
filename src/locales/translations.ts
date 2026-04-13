@@ -154,6 +154,21 @@ export interface Translations {
     tbd: string;
     champion: string;
   };
+  auth: {
+    signInWithGoogle: string;
+    signOut: string;
+    signInToCreate: string;
+    signInToJoin: string;
+    joiningAuto: string;
+    protectWithGoogle: string;
+    protectWithGoogleDescription: string;
+    protectPasswordLabel: string;
+    protectSubmit: string;
+    protectSubmitting: string;
+    protectSuccess: string;
+    oauthFailed: string;
+    oauthExpired: string;
+  };
   apiErrors: Record<string, string>;
 }
 
@@ -312,6 +327,22 @@ export const ptBR: Translations = {
     tbd: "A definir",
     champion: "Campeão",
   },
+  auth: {
+    signInWithGoogle: "Entrar com Google",
+    signOut: "Sair",
+    signInToCreate: "Entre com sua conta Google para criar um torneio.",
+    signInToJoin: "Entre com sua conta Google para entrar neste torneio.",
+    joiningAuto: "Entrando no torneio…",
+    protectWithGoogle: "Proteger com Google",
+    protectWithGoogleDescription:
+      "Vincule seu nome neste torneio à sua conta Google. Depois disso, só você poderá usar este nome.",
+    protectPasswordLabel: "Senha do torneio",
+    protectSubmit: "Vincular conta",
+    protectSubmitting: "Vinculando…",
+    protectSuccess: "Conta vinculada com sucesso!",
+    oauthFailed: "Falha ao entrar com o Google. Tente novamente.",
+    oauthExpired: "O login expirou. Tente novamente.",
+  },
   apiErrors: {
     "Invalid request body.": "Requisição inválida.",
     "Missing token.": "Token ausente.",
@@ -342,6 +373,19 @@ export const ptBR: Translations = {
     "Cannot change picks for resolved matches.": "Não é possível alterar palpites de partidas já resolvidas.",
     "Tournament code is required.": "Código do torneio não informado.",
     "Rankings are only available after the tournament starts.": "O ranking está disponível apenas após o início do torneio.",
+    "Sign in required.": "É necessário entrar com o Google.",
+    "Sign in required to create tournaments.": "É necessário entrar com o Google para criar torneios.",
+    "Sign in required to join this tournament.": "É necessário entrar com o Google para entrar neste torneio.",
+    "This participant is protected with Google. Sign in with Google to continue.":
+      "Este participante está protegido com o Google. Entre com o Google para continuar.",
+    "This participant is already linked to another account.":
+      "Este participante já está vinculado a outra conta.",
+    "This account is already linked to another participant.":
+      "Esta conta já está vinculada a outro participante deste torneio.",
+    "This tournament does not use password login.":
+      "Este torneio não usa login por senha.",
+    "OAuth flow expired or invalid.": "O login com Google expirou. Tente novamente.",
+    "Google sign-in failed.": "Falha no login com Google.",
   },
 };
 
@@ -499,6 +543,22 @@ export const en: Translations = {
     round: (n) => `Round ${n}`,
     tbd: "TBD",
     champion: "Champion",
+  },
+  auth: {
+    signInWithGoogle: "Sign in with Google",
+    signOut: "Sign out",
+    signInToCreate: "Sign in with Google to create a tournament.",
+    signInToJoin: "Sign in with Google to join this tournament.",
+    joiningAuto: "Joining tournament…",
+    protectWithGoogle: "Protect with Google",
+    protectWithGoogleDescription:
+      "Link your name in this tournament to your Google account. After this, only you can use this name.",
+    protectPasswordLabel: "Tournament password",
+    protectSubmit: "Link account",
+    protectSubmitting: "Linking…",
+    protectSuccess: "Account linked successfully!",
+    oauthFailed: "Google sign-in failed. Please try again.",
+    oauthExpired: "Sign-in expired. Please try again.",
   },
   apiErrors: {},
 };

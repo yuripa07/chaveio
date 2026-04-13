@@ -15,6 +15,10 @@ export default defineConfig({
     maxWorkers: 1,
     env: {
       JWT_SECRET: "test-secret-for-vitest",
+      SESSION_SECRET: "test-session-secret-for-vitest",
+      GOOGLE_CLIENT_ID: "test-client-id",
+      GOOGLE_CLIENT_SECRET: "test-client-secret",
+      GOOGLE_REDIRECT_URI: "http://localhost:3000/api/auth/google/callback",
     },
     coverage: {
       provider: "v8",

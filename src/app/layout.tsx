@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/contexts/locale-context";
 import { ThemeProvider } from "@/contexts/theme-context";
+import { UserProvider } from "@/contexts/user-context";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import "./globals.css";
 
@@ -24,8 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
         <ThemeProvider>
           <LocaleProvider>
-            {children}
-            <LocaleSwitcher />
+            <UserProvider>
+              {children}
+              <LocaleSwitcher />
+            </UserProvider>
           </LocaleProvider>
         </ThemeProvider>
         <Analytics />

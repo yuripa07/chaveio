@@ -7,6 +7,62 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.1.0] - 2026-04-12
+
+### Added
+
+#### Google OAuth sign-in
+- Users sign in with Google via `arctic` (PKCE). Session persisted in an `HttpOnly` `chaveio_session` cookie (30d, HS256 via `jose`) signed with the new `SESSION_SECRET`.
+- New routes: `GET /api/auth/google/start`, `GET /api/auth/google/callback`, `POST /api/auth/logout`, `GET /api/auth/me`.
+- Short-lived signed `chaveio_oauth_flow` cookie carries OAuth `state` + PKCE verifier + allowlisted `returnTo` (5 min TTL). No new DB table.
+- New libraries: `src/lib/session.ts`, `src/lib/oauth.ts`, `src/lib/oauth-flow-cookie.ts`. `lib/api-utils.ts` gains `handleUserRequest()` alongside the existing `handleRequest()`.
+
+#### User model and two-token architecture
+- New `User` model (`googleSub` unique, email, name, avatarUrl, locale, `tier = FREE`, `lastLoginAt`). Future-proof for profiles, history, and premium.
+- `Tournament` adds `authMode` (`PASSWORD` | `GOOGLE`, default `PASSWORD` for backward compatibility) and nullable `creatorUserId`. `passwordHash` relaxed to nullable.
+- `Participant` adds nullable `userId` with `@@unique([tournamentId, userId])` (Postgres treats NULLs as distinct, so legacy rows coexist).
+- Additive migration `add_google_auth` — zero required changes on existing rows.
+
+#### Tournament creation and join flow
+- All new tournaments are created in `GOOGLE` mode. Creator form no longer collects name or password — identity comes from the session.
+- `POST /api/tournaments/[code]/join` branches on `authMode`: `GOOGLE` requires a session and auto-links the `Participant`; `PASSWORD` keeps the legacy `{displayName, password}` body unchanged.
+- Display-name collisions on Google joins are resolved deterministically (`" 2"`, `" 3"`, …).
+- `GET /api/tournaments/[code]/check` now also returns `authMode` so the lobby can pick the right UI before prompting.
+
+#### Protect-with-Google (legacy linking)
+- New `POST /api/tournaments/[code]/link-google`: a participant in a `PASSWORD` tournament re-enters the tournament password once to bind their Google account. After linking, password-only login for that displayName is rejected with 401 "This participant is protected with Google…".
+- Frontend CTA appears in the lobby when signed in + current participant is unlinked.
+
+#### Frontend
+- `UserProvider` context + `useUser()` hook (`src/contexts/user-context.tsx`) mounted in the root layout.
+- `GoogleSignInButton` component (full-page anchor — carries `Set-Cookie` on redirect). Primary/secondary variants.
+- `UserChip` component: header avatar + sign-out dropdown.
+- Landing page (`/`) gates "Create tournament" on authentication and surfaces OAuth errors via `?auth_error=`.
+- Tournament lobby (`/tournament/[code]`) branches on `authMode` + session state: Google auto-join, password form, or protect-with-Google CTA.
+
+#### i18n
+- New `auth` namespace in `src/locales/translations.ts` (pt-BR + en).
+- New English `apiErrors` for session + linking rejections, translated in pt-BR (`"Sign in required…"`, `"This participant is protected with Google…"`, etc.).
+
+#### Docs
+- New `docs/auth.md` — two-token model, OAuth flow diagram, linking flow, legacy guarantees, out-of-scope list.
+- `AGENTS.md`, `docs/backend-conventions.md`, `docs/frontend-conventions.md`, `docs/i18n.md` updated for `handleUserRequest`, `UserContext`, `GoogleSignInButton`, `authMode`, and the new routes/env vars.
+
+#### Testing
+- Unit: `session.test.ts`, `oauth-flow-cookie.test.ts`.
+- Integration: `auth/me.test.ts`, `auth/logout.test.ts`, `auth/google-callback.test.ts`, `join-google.test.ts`, `link-google.test.ts`; `tournaments.test.ts` and `check.test.ts` expanded for the new session gate and `authMode` response.
+- `tests/integration/fixtures.ts` gains `createUserAndSession`, `createGoogleTournament`, `joinTournamentWithGoogle`, `linkGoogleToParticipant`. Legacy PASSWORD-mode fixture rewritten to a direct Prisma insert so pre-existing tests remain untouched.
+
+### Security
+- `/link-google` honors the two-case auth test rule (returning-user-wrong-password **and** first-time-user-wrong-password both 401).
+- Session cookies are `HttpOnly`, `SameSite=Lax`, `Secure` in production. `SameSite=Lax` is intentional so the OAuth callback carries the cookie back.
+
+### Internal
+- New dependency: `arctic` (Google OAuth + PKCE).
+- `SESSION_SECRET` env var (distinct from `JWT_SECRET`) so either can be rotated independently.
+
+---
+
 ## [0.0.3] - 2026-04-12
 
 ### Added
