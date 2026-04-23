@@ -54,15 +54,17 @@ export default function BracketView({
             const isLastRound = roundIndex === totalRounds - 1;
             return (
               <div key={round.id} className="px-4 pb-2" style={{ width: BRACKET_COLUMN_WIDTH + 32 }}>
-                <span className="inline-flex items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
-                  {round.name || (isLastRound ? t.bracketView.final : t.bracketView.round(round.roundNumber))}
-                  <span className="rounded-md bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-zinc-500 dark:text-zinc-400">
+                <div className="flex flex-wrap items-center gap-1.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
+                  <span className="break-all">
+                    {round.name || (isLastRound ? t.bracketView.final : t.bracketView.round(round.roundNumber))}
+                  </span>
+                  <span className="shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-zinc-500 dark:text-zinc-400">
                     {round.pointValue}pt
                   </span>
                   {round.status === RoundStatus.ACTIVE && (
                     <PulseDot color="indigo" size="sm" />
                   )}
-                </span>
+                </div>
               </div>
             );
           })}
