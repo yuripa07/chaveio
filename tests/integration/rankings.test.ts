@@ -19,12 +19,9 @@ afterAll(async () => {
 
 
 async function setup() {
-  const { code, token: creatorToken } = await createTournament().then((r) => r.json());
-  const { token: bobToken } = await joinTournament(code, {
-    displayName: "Bob",
-    password: "pass123",
-  }).then((r) => r.json());
-  return { code, creatorToken, bobToken };
+  const { code, token: creatorToken } = await createTournament();
+  const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
+  return { code, creatorToken, bobToken: bobToken! };
 }
 
 async function setupAndStart() {
@@ -112,9 +109,8 @@ describe("GET /api/tournaments/[code]/rankings", () => {
     const { code: code2, token: strangerToken } = await createTournament({
       name: "Other tournament",
       items: ["A", "B", "C", "D"],
-      creatorName: "Stranger",
-      creatorPassword: "pw",
-    }).then((r) => r.json());
+      userName: "Stranger",
+    });
     await submitFullBracketPicks(strangerToken, code2);
     await startTournament(code2, strangerToken);
 

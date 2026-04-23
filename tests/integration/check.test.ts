@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { testPrisma, resetDb } from "./helpers";
 import {
   createTournament,
-  createGoogleTournament,
   startTournament,
   joinTournament,
   submitFullBracketPicks,
@@ -27,7 +26,7 @@ async function checkCode(code: string) {
 
 describe("GET /api/tournaments/[code]/check", () => {
   it("returns exists:true and status LOBBY for a new tournament", async () => {
-    const { code } = await createTournament().then((r) => r.json());
+    const { code } = await createTournament();
     const res = await checkCode(code);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -43,13 +42,10 @@ describe("GET /api/tournaments/[code]/check", () => {
   });
 
   it("reflects ACTIVE status after tournament is started", async () => {
-    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
-    const { token: bobToken } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code, token: creatorToken } = await createTournament();
+    const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
     await submitFullBracketPicks(creatorToken, code);
-    await submitFullBracketPicks(bobToken, code);
+    await submitFullBracketPicks(bobToken!, code);
     await startTournament(code, creatorToken);
 
     const res = await checkCode(code);
@@ -60,22 +56,8 @@ describe("GET /api/tournaments/[code]/check", () => {
   });
 
   it("does not require authentication", async () => {
-    const { code } = await createTournament().then((r) => r.json());
+    const { code } = await createTournament();
     const res = await checkCode(code);
     expect(res.status).toBe(200);
-  });
-
-  it("returns authMode=PASSWORD for legacy tournaments", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const res = await checkCode(code);
-    const body = await res.json();
-    expect(body.authMode).toBe("PASSWORD");
-  });
-
-  it("returns authMode=GOOGLE for Google-mode tournaments", async () => {
-    const { code } = await createGoogleTournament();
-    const res = await checkCode(code);
-    const body = await res.json();
-    expect(body.authMode).toBe("GOOGLE");
   });
 });

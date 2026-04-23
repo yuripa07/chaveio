@@ -230,13 +230,13 @@ return user ? <SignedInExperience /> : <GoogleSignInButton returnTo={…} />;
 
 For cross-tab sign-out, call `useUser().logout()` — it POSTs `/api/auth/logout` and refreshes the session state.
 
-## 14. Two-token awareness on the lobby
+## 14. Global AppHeader
 
-`src/app/tournament/[code]/page.tsx` reads `authMode` from `GET /api/tournaments/[code]/check` (public) before deciding the no-token UI:
+`src/components/app-header.tsx` is mounted once in `src/app/layout.tsx` and appears on every screen. It carries the brand on the left and a user dropdown on the right (avatar + theme toggle + locale toggle + sign-out). When the user is signed out, the dropdown slot becomes a compact `GoogleSignInButton` (secondary variant).
 
-- `GOOGLE` + no session → show `GoogleSignInButton`.
-- `GOOGLE` + session + no tournament token → auto-`POST /join` with `credentials: "same-origin"`, persist the returned token via `setTokenFromResponse`.
-- `PASSWORD` + no session → password join form + secondary `GoogleSignInButton`.
-- `PASSWORD` + session + tournament token + `participant.userId == null` → "Protect with Google" CTA, which posts to `/api/tournaments/[code]/link-google` with `{displayName, password}` and swaps in the fresh token.
+Individual pages must **not** render their own brand header, `UserChip`, or `LocaleSwitcher` — the global `AppHeader` covers all three. Sub-headers like `TournamentHeader` remain page-owned and render beneath the global header.
 
-When adding new session-sensitive features on the lobby, follow the same branch structure — do not assume `authMode` without reading `/check` first.
+The lobby at `src/app/tournament/[code]/page.tsx` gates the no-token UI on session state via `useUser()`:
+
+- no session → show `GoogleSignInButton` with `returnTo=/tournament/<code>`.
+- session + no tournament token → auto-`POST /join` with `credentials: "same-origin"`, persist the returned token via `setTokenFromResponse`.

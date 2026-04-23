@@ -32,13 +32,10 @@ async function getBracket(code: string) {
 
 describe("POST /api/picks — full bracket submission", () => {
   it("accepts a valid full bracket and marks hasSubmittedPicks=true", async () => {
-    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
-    const { token: bobToken } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code, token: creatorToken } = await createTournament();
+    const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
 
-    const res = await submitFullBracketPicks(bobToken, code);
+    const res = await submitFullBracketPicks(bobToken!, code);
     expect(res.status).toBe(200);
 
     const participant = await testPrisma.participant.findFirst({
@@ -50,11 +47,8 @@ describe("POST /api/picks — full bracket submission", () => {
   });
 
   it("rejects submission missing picks for some matches", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const { token } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code } = await createTournament();
+    const { token } = await joinTournament(code, { userName: "Bob" });
 
     const t = await getBracket(code);
     const r1Picks = t.rounds[0].matches.map((m) => ({
@@ -62,16 +56,13 @@ describe("POST /api/picks — full bracket submission", () => {
       pickedItemId: m.slots[0].itemId,
     }));
 
-    const res = await submitPicks(token, { tournamentCode: code, picks: r1Picks });
+    const res = await submitPicks(token!, { tournamentCode: code, picks: r1Picks });
     expect(res.status).toBe(400);
   });
 
   it("rejects pick with item not in round-1 match slots", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const { token } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code } = await createTournament();
+    const { token } = await joinTournament(code, { userName: "Bob" });
 
     const t = await getBracket(code);
     const r1 = t.rounds[0];
@@ -83,16 +74,13 @@ describe("POST /api/picks — full bracket submission", () => {
       { matchId: r2.matches[0].id, pickedItemId: r1.matches[1].slots[0].itemId },
     ];
 
-    const res = await submitPicks(token, { tournamentCode: code, picks });
+    const res = await submitPicks(token!, { tournamentCode: code, picks });
     expect(res.status).toBe(400);
   });
 
   it("rejects cascade violation in round 2", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const { token } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code } = await createTournament();
+    const { token } = await joinTournament(code, { userName: "Bob" });
 
     const t = await getBracket(code);
     const r1 = t.rounds[0];
@@ -104,16 +92,13 @@ describe("POST /api/picks — full bracket submission", () => {
       { matchId: r2.matches[0].id, pickedItemId: r1.matches[0].slots[1].itemId },
     ];
 
-    const res = await submitPicks(token, { tournamentCode: code, picks });
+    const res = await submitPicks(token!, { tournamentCode: code, picks });
     expect(res.status).toBe(400);
   });
 
   it("resubmission in LOBBY overwrites picks", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const { token } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code } = await createTournament();
+    const { token } = await joinTournament(code, { userName: "Bob" });
 
     const t = await getBracket(code);
     const r1 = t.rounds[0];
@@ -124,14 +109,14 @@ describe("POST /api/picks — full bracket submission", () => {
       { matchId: r1.matches[1].id, pickedItemId: r1.matches[1].slots[0].itemId },
       { matchId: r2.matches[0].id, pickedItemId: r1.matches[0].slots[0].itemId },
     ];
-    await submitPicks(token, { tournamentCode: code, picks: firstPicks });
+    await submitPicks(token!, { tournamentCode: code, picks: firstPicks });
 
     const secondPicks = [
       { matchId: r1.matches[0].id, pickedItemId: r1.matches[0].slots[0].itemId },
       { matchId: r1.matches[1].id, pickedItemId: r1.matches[1].slots[0].itemId },
       { matchId: r2.matches[0].id, pickedItemId: r1.matches[1].slots[0].itemId },
     ];
-    const res = await submitPicks(token, { tournamentCode: code, picks: secondPicks });
+    const res = await submitPicks(token!, { tournamentCode: code, picks: secondPicks });
     expect(res.status).toBe(200);
 
     const dbPicks = await testPrisma.pick.findMany({
@@ -141,7 +126,7 @@ describe("POST /api/picks — full bracket submission", () => {
   });
 
   it("creator can also submit picks", async () => {
-    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
+    const { code, token: creatorToken } = await createTournament();
     const res = await submitFullBracketPicks(creatorToken, code);
     expect(res.status).toBe(200);
 
@@ -152,7 +137,7 @@ describe("POST /api/picks — full bracket submission", () => {
 
 describe("POST /api/picks — additional guards", () => {
   it("returns 409 when trying to submit picks after tournament is FINISHED", async () => {
-    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
+    const { code, token: creatorToken } = await createTournament();
     await submitFullBracketPicks(creatorToken, code);
     await startTournament(code, creatorToken);
 
@@ -174,13 +159,12 @@ describe("POST /api/picks — additional guards", () => {
   });
 
   it("returns 404 when tournamentCode in body belongs to a different tournament", async () => {
-    const { code: code1 } = await createTournament().then((r) => r.json());
+    const { code: code1 } = await createTournament();
     const { code: code2, token: strangerToken } = await createTournament({
       name: "Other",
       items: ["W", "X", "Y", "Z"],
-      creatorName: "Stranger",
-      creatorPassword: "pw",
-    }).then((r) => r.json());
+      userName: "Stranger",
+    });
 
     const res = await submitPicks(strangerToken, { tournamentCode: code1, picks: [] });
     expect(res.status).toBe(404);
@@ -191,23 +175,17 @@ describe("POST /api/picks — additional guards", () => {
 
 describe("GET /api/picks", () => {
   it("returns only the requester's picks", async () => {
-    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
-    const { token: bobToken } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
-    const { token: aliceToken } = await joinTournament(code, {
-      displayName: "Alice2",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code, token: creatorToken } = await createTournament();
+    const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
+    const { token: aliceToken } = await joinTournament(code, { userName: "Alice2" });
 
-    await submitFullBracketPicks(bobToken, code);
-    await submitFullBracketPicks(aliceToken, code);
+    await submitFullBracketPicks(bobToken!, code);
+    await submitFullBracketPicks(aliceToken!, code);
 
     const t = await getBracket(code);
     const totalMatches = t.rounds.reduce((sum, r) => sum + r.matches.length, 0);
 
-    const res = await getPicks(bobToken, code);
+    const res = await getPicks(bobToken!, code);
     expect(res.status).toBe(200);
     const { picks } = await res.json();
     expect(picks).toHaveLength(totalMatches);
@@ -216,7 +194,7 @@ describe("GET /api/picks", () => {
   });
 
   it("returns 400 when tournamentCode query param is missing", async () => {
-    const { token } = await createTournament().then((r) => r.json());
+    const { token } = await createTournament();
     const { GET } = await import("@/app/api/picks/route");
     const { NextRequest } = await import("next/server");
     const res = await GET(
@@ -228,7 +206,7 @@ describe("GET /api/picks", () => {
   });
 
   it("returns 401 without token", async () => {
-    const { code } = await createTournament().then((r) => r.json());
+    const { code } = await createTournament();
     const res = await getPicks(null as unknown as string, code);
     expect(res.status).toBe(401);
   });

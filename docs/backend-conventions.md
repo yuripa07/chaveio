@@ -9,9 +9,7 @@ Rules for `src/app/api/` routes. Based on Vercel React best practices.
 All protected routes use one of the helpers from `lib/api-utils.ts` to eliminate auth/body boilerplate. Pick by token type:
 
 - **`handleRequest(req, "participant" | "creator", opts)`** — Bearer tournament JWT from `Authorization` header. Payload: `{ participantId, tournamentId, isCreator }`. Used for in-tournament actions.
-- **`handleUserRequest(req, opts)`** — `chaveio_session` cookie (Google-authenticated user). Payload: `{ userId, v }`. Used for user-scope actions (create tournament, join a GOOGLE tournament, `/me`).
-
-A single route can call both manually when needed (e.g. `/link-google` requires a session **and** password verification against a specific tournament).
+- **`handleUserRequest(req, opts)`** — `chaveio_session` cookie (Google-authenticated user). Payload: `{ userId, v }`. Used for user-scope actions (create tournament, join a tournament, `/me`).
 
 ```typescript
 import { handleRequest, handleUserRequest } from "@/lib/api-utils";
@@ -40,13 +38,14 @@ if (!auth.ok) return auth.response;
 
 ### Parallel independent operations
 
-Use `Promise.all()` for independent operations like hash + code generation:
+Use `Promise.all()` for independent operations:
 
 ```typescript
-const [passwordHash, code] = await Promise.all([
-  bcrypt.hash(creatorPassword, 10),
-  generateUniqueCode()
-])
+const [session, { code }, body] = await Promise.all([
+  requireUser(req),
+  params,
+  req.json(),
+]);
 ```
 
 ---
@@ -86,7 +85,7 @@ for (const p of picks) {
 ## 5. Transaction Best Practices (HIGH)
 
 - Keep `$transaction` blocks short — they hold a DB connection
-- Do hashing, validation, and data fetching **before** the transaction
+- Do validation and data fetching **before** the transaction
 - Only put mutations inside the transaction
 - Use `Promise.all` for independent writes inside transactions:
 
@@ -139,34 +138,35 @@ Start the params promise early alongside auth/body if possible.
 
 ---
 
-## 8. Auth Gate Testing (CRITICAL — learned from prod incident)
+## 8. Auth Gate Testing (CRITICAL)
 
-Every authentication gate needs **two** tests:
+Every authentication gate needs both a **missing credential** test and a **tampered credential** test:
 
-1. **Returning user with wrong credentials** — validates re-auth logic
-2. **First-time user with wrong credentials** — validates the gate itself
-
-Skipping the second test allows anyone to bypass the gate on their first request.
+- Missing credential covers the gate itself (anonymous requester is rejected).
+- Tampered credential covers signature validation (forged JWT is rejected).
 
 ```typescript
-// ✗ Bad — only tests re-auth, gate is open to new users
-await joinTournament(code, { displayName: "Bob", password: "correct" });
-const res = await joinTournament(code, { displayName: "Bob", password: "wrong" });
-expect(res.status).toBe(401);
+it("returns 401 when no session cookie is present", async () => {
+  const res = await POST(new NextRequest(url, { method: "POST", body: "{}" }), {
+    params: Promise.resolve({ code }),
+  });
+  expect(res.status).toBe(401);
+});
 
-// ✓ Good — also tests that the gate is closed to new users
-it("rejects first-time join with wrong tournament password", async () => {
-  const res = await joinTournament(code, { displayName: "NewUser", password: "wrong" });
+it("returns 401 when session cookie is tampered", async () => {
+  const res = await POST(
+    new NextRequest(url, {
+      method: "POST",
+      headers: { Cookie: `${SESSION_COOKIE}=garbage.jwt.value` },
+      body: "{}",
+    }),
+    { params: Promise.resolve({ code }) }
+  );
   expect(res.status).toBe(401);
 });
 ```
 
-Applies to every password-gated route. `/api/tournaments/[code]/link-google` is tested with both cases:
-
-1. A session that has **previously linked** to a participant, retrying with the wrong password.
-2. A **first-time** session with the wrong password.
-
-Both must return 401. Integration tests live in `tests/integration/link-google.test.ts`.
+See `tests/integration/join-google.test.ts` and `tournaments.test.ts` for the canonical pattern.
 
 ---
 
@@ -179,4 +179,4 @@ Routes that accept the `chaveio_session` cookie must be reachable from same-orig
 - The OAuth flow cookie (`chaveio_oauth_flow`) is separate, signed by `SESSION_SECRET`, and short-lived (5 min TTL). It carries `state` + PKCE verifier + allowlisted `returnTo`. Consume it once with `consumeFlowCookie(req, state)` — it must reject on missing cookie, mismatched state, tampered signature, or expiry.
 - OAuth `returnTo` is allowlisted against `^/(?:tournament(?:/[A-Z0-9]+)?|)?$`. Anything else falls back to `/`.
 
-Integration tests for session routes use the helpers in `tests/integration/fixtures.ts` — `createUserAndSession`, `createGoogleTournament`, `joinTournamentWithGoogle`, `linkGoogleToParticipant`. Always include a "tampered session cookie" test alongside the "missing session" test (the tampered case covers signature validation, the missing case covers the gate itself — see §8).
+Integration tests for session routes use the helpers in `tests/integration/fixtures.ts` — `createUserAndSession`, `createTournament`, `joinTournament`. Always include a "tampered session cookie" test alongside the "missing session" test (§8).

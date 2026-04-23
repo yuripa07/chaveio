@@ -10,8 +10,6 @@ export interface Translations {
     back: string;
     points: string;
     you: string;
-    hidePassword: string;
-    showPassword: string;
     close: string;
     kick: string;
     kicking: string;
@@ -54,11 +52,6 @@ export interface Translations {
     roundPlaceholders: [string, string, string];
     roundPlaceholderFinal: string;
     roundPlaceholderDefault: string;
-    creatorSection: string;
-    yourName: string;
-    yourNamePlaceholder: string;
-    passwordLabel: string;
-    passwordHint: string;
     creating: string;
     create: string;
     somethingWentWrong: string;
@@ -72,9 +65,6 @@ export interface Translations {
     bracketSection: string;
     items: (n: number) => string;
     joinTitle: string;
-    joinSubtitle: string;
-    yourNameOnScore: string;
-    passwordLabel: string;
     joinButton: string;
     joining: string;
     joinFailed: string;
@@ -160,14 +150,15 @@ export interface Translations {
     signInToCreate: string;
     signInToJoin: string;
     joiningAuto: string;
-    protectWithGoogle: string;
-    protectWithGoogleDescription: string;
-    protectPasswordLabel: string;
-    protectSubmit: string;
-    protectSubmitting: string;
-    protectSuccess: string;
     oauthFailed: string;
     oauthExpired: string;
+  };
+  appHeader: {
+    brand: string;
+    openMenu: string;
+    accountSection: string;
+    themeSection: string;
+    languageSection: string;
   };
   apiErrors: Record<string, string>;
 }
@@ -182,8 +173,6 @@ export const ptBR: Translations = {
     back: "Voltar",
     points: "pontos",
     you: "(você)",
-    hidePassword: "Ocultar senha",
-    showPassword: "Mostrar senha",
     close: "Fechar",
     kick: "Expulsar",
     kicking: "Expulsando…",
@@ -226,11 +215,6 @@ export const ptBR: Translations = {
     roundPlaceholders: ["Ex: Fase de grupos", "Ex: Quartas de final", "Ex: Semifinal"],
     roundPlaceholderFinal: "Ex: Grande Final",
     roundPlaceholderDefault: "Nome da fase",
-    creatorSection: "Sua conta (criador)",
-    yourName: "Seu nome",
-    yourNamePlaceholder: "Seu nome",
-    passwordLabel: "Senha do torneio",
-    passwordHint: "Compartilhe com todos que vão participar.",
     creating: "Criando torneio…",
     create: "Criar torneio",
     somethingWentWrong: "Algo deu errado.",
@@ -244,9 +228,6 @@ export const ptBR: Translations = {
     bracketSection: "Chaveamento",
     items: (n) => `${n} itens`,
     joinTitle: "Entrar no torneio",
-    joinSubtitle: "Escolha um nome para aparecer no placar e informe a senha do torneio.",
-    yourNameOnScore: "Seu nome no placar",
-    passwordLabel: "Senha do torneio",
     joinButton: "Entrar no torneio",
     joining: "Entrando…",
     joinFailed: "Falha ao entrar.",
@@ -333,15 +314,15 @@ export const ptBR: Translations = {
     signInToCreate: "Entre com sua conta Google para criar um torneio.",
     signInToJoin: "Entre com sua conta Google para entrar neste torneio.",
     joiningAuto: "Entrando no torneio…",
-    protectWithGoogle: "Proteger com Google",
-    protectWithGoogleDescription:
-      "Vincule seu nome neste torneio à sua conta Google. Depois disso, só você poderá usar este nome.",
-    protectPasswordLabel: "Senha do torneio",
-    protectSubmit: "Vincular conta",
-    protectSubmitting: "Vinculando…",
-    protectSuccess: "Conta vinculada com sucesso!",
     oauthFailed: "Falha ao entrar com o Google. Tente novamente.",
     oauthExpired: "O login expirou. Tente novamente.",
+  },
+  appHeader: {
+    brand: "Chaveio",
+    openMenu: "Abrir menu",
+    accountSection: "Conta",
+    themeSection: "Tema",
+    languageSection: "Idioma",
   },
   apiErrors: {
     "Invalid request body.": "Requisição inválida.",
@@ -354,7 +335,6 @@ export const ptBR: Translations = {
     "Tournament not found.": "Torneio não encontrado.",
     "Access denied.": "Acesso negado.",
     "You are no longer a participant in this tournament.": "Você não é mais um participante deste torneio.",
-    "Wrong password.": "Senha incorreta.",
     "This tournament has ended. New participants cannot join.": "Este torneio já foi finalizado. Novos participantes não podem entrar.",
     "Tournament has already started.": "O torneio já foi iniciado.",
     "All participants must submit their picks before starting the tournament.": "Todos os participantes precisam enviar seus palpites antes de iniciar o torneio.",
@@ -376,14 +356,6 @@ export const ptBR: Translations = {
     "Sign in required.": "É necessário entrar com o Google.",
     "Sign in required to create tournaments.": "É necessário entrar com o Google para criar torneios.",
     "Sign in required to join this tournament.": "É necessário entrar com o Google para entrar neste torneio.",
-    "This participant is protected with Google. Sign in with Google to continue.":
-      "Este participante está protegido com o Google. Entre com o Google para continuar.",
-    "This participant is already linked to another account.":
-      "Este participante já está vinculado a outra conta.",
-    "This account is already linked to another participant.":
-      "Esta conta já está vinculada a outro participante deste torneio.",
-    "This tournament does not use password login.":
-      "Este torneio não usa login por senha.",
     "OAuth flow expired or invalid.": "O login com Google expirou. Tente novamente.",
     "Google sign-in failed.": "Falha no login com Google.",
   },
@@ -399,8 +371,6 @@ export const en: Translations = {
     back: "Back",
     points: "points",
     you: "(you)",
-    hidePassword: "Hide password",
-    showPassword: "Show password",
     close: "Close",
     kick: "Kick",
     kicking: "Kicking…",
@@ -443,11 +413,6 @@ export const en: Translations = {
     roundPlaceholders: ["E.g.: Group stage", "E.g.: Quarter-finals", "E.g.: Semi-finals"],
     roundPlaceholderFinal: "E.g.: Grand Final",
     roundPlaceholderDefault: "Phase name",
-    creatorSection: "Your account (creator)",
-    yourName: "Your name",
-    yourNamePlaceholder: "Your name",
-    passwordLabel: "Tournament password",
-    passwordHint: "Share with everyone who will participate.",
     creating: "Creating tournament…",
     create: "Create tournament",
     somethingWentWrong: "Something went wrong.",
@@ -461,9 +426,6 @@ export const en: Translations = {
     bracketSection: "Bracket",
     items: (n) => `${n} items`,
     joinTitle: "Join tournament",
-    joinSubtitle: "Choose a name to appear on the scoreboard and enter the tournament password.",
-    yourNameOnScore: "Your name on scoreboard",
-    passwordLabel: "Tournament password",
     joinButton: "Join tournament",
     joining: "Joining…",
     joinFailed: "Failed to join.",
@@ -550,15 +512,15 @@ export const en: Translations = {
     signInToCreate: "Sign in with Google to create a tournament.",
     signInToJoin: "Sign in with Google to join this tournament.",
     joiningAuto: "Joining tournament…",
-    protectWithGoogle: "Protect with Google",
-    protectWithGoogleDescription:
-      "Link your name in this tournament to your Google account. After this, only you can use this name.",
-    protectPasswordLabel: "Tournament password",
-    protectSubmit: "Link account",
-    protectSubmitting: "Linking…",
-    protectSuccess: "Account linked successfully!",
     oauthFailed: "Google sign-in failed. Please try again.",
     oauthExpired: "Sign-in expired. Please try again.",
+  },
+  appHeader: {
+    brand: "Chaveio",
+    openMenu: "Open menu",
+    accountSection: "Account",
+    themeSection: "Theme",
+    languageSection: "Language",
   },
   apiErrors: {},
 };

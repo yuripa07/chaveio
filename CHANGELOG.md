@@ -7,6 +7,36 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.0] - 2026-04-23
+
+### Removed
+
+#### Legacy PASSWORD authentication
+- `Tournament.passwordHash` and `Tournament.authMode` columns dropped (migration `remove_password_auth`).
+- `POST /api/tournaments/[code]/link-google` deleted — no remaining linking surface.
+- `handlePasswordJoin` removed from `POST /api/tournaments/[code]/join`; the route now requires a Google session unconditionally.
+- `Participant.passwordHash` (already nullable) is no longer touched by any code path.
+- `bcryptjs` dependency removed.
+- `GET /api/tournaments/[code]/check` response simplified to `{ exists, status }` (no `authMode`).
+- Lobby UI no longer branches on `authMode`: `src/app/tournament/[code]/page.tsx`, `bracket/page.tsx`, `live/page.tsx`, `results/page.tsx` all drop the `PASSWORD` paths and the "Protect with Google" CTA.
+- `tests/integration/link-google.test.ts` deleted; password-protected impersonation regressions removed from `join-google.test.ts`.
+- Translation strings for legacy auth (`auth.protectWithGoogle*`, `auth.linkRequired*`, `lobby.passwordLabel`, etc.) removed from `src/locales/translations.ts`.
+
+### Added
+
+#### Global `AppHeader`
+- New `src/components/app-header.tsx` mounted once in `src/app/layout.tsx`. Replaces the per-page `UserChip` and the fixed-bottom `LocaleSwitcher`.
+- Brand on the left; user dropdown on the right with avatar, theme toggle (Sun/Moon/Monitor), locale toggle (PT/EN), and sign-out. When signed out, a compact `GoogleSignInButton` (secondary) takes the dropdown slot.
+- Escape and click-outside close the dropdown.
+
+### Changed
+
+- `GoogleSignInButton` primary variant wraps the colored Google G in a white circle so it stays visible on the indigo background.
+- `tests/integration/fixtures.ts` collapsed to a single `createTournament` / `joinTournament` pair (Google-only); helpers no longer return raw `Response` objects, returning destructurable tuples (`{ response, status, code, token, sessionCookie, userId }`).
+- `docs/auth.md`, `docs/backend-conventions.md`, `docs/frontend-conventions.md`, and `AGENTS.md` updated for the single-auth model.
+
+---
+
 ## [0.1.0] - 2026-04-12
 
 ### Added
