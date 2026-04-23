@@ -10,7 +10,7 @@ export async function GET(
   const { code } = await params;
   const tournament = await prisma.tournament.findUnique({
     where: { code },
-    select: { status: true, authMode: true },
+    select: { status: true },
   });
   if (!tournament) {
     return Response.json({ exists: false }, { status: 404 });
@@ -18,6 +18,5 @@ export async function GET(
   return Response.json({
     exists: true,
     status: tournament.status,
-    authMode: tournament.authMode,
   });
 }

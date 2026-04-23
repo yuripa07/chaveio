@@ -47,8 +47,6 @@ export type TournamentCore = {
   code: string;
   name: string;
   status: string;
-  theme?: string;
-  authMode?: string;
 };
 
 export type TournamentState = {

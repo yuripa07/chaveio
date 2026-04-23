@@ -7,7 +7,6 @@ import { PlusCircle, LogIn, Trophy, AlertCircle } from "lucide-react";
 import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 import { Spinner } from "@/components/spinner";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
-import { UserChip } from "@/components/user-chip";
 import { cn } from "@/lib/cn";
 import { useLocale } from "@/contexts/locale-context";
 import { useUser } from "@/contexts/user-context";
@@ -81,10 +80,6 @@ function HomeContent() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <header className="absolute right-4 top-4 z-10">
-        {ready && user ? <UserChip /> : null}
-      </header>
-
       <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-6 py-24">
         <div className="w-full max-w-sm space-y-10 text-center">
           <div className="flex flex-col items-center gap-4">

@@ -70,8 +70,6 @@ export async function POST(req: NextRequest) {
       data: {
         code,
         name,
-        passwordHash: null,
-        authMode: "GOOGLE",
         creatorUserId: user.id,
         roundNames: JSON.stringify(roundNames ?? []),
         items: {

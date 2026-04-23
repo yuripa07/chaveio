@@ -18,18 +18,16 @@ afterAll(async () => {
 });
 
 async function setup() {
-  const createRes = await createTournament({
+  const { code, token } = await createTournament({
     name: "Kick Test",
     items: ["Alpha", "Bravo", "Charlie", "Delta"],
   });
-  const { code, token } = await createRes.json();
-  const joinRes = await joinTournament(code, { displayName: "Bob", password: "pass123" });
-  const { token: bobToken } = await joinRes.json();
+  const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
   const stateRes = await getTournament(code, token);
   const { participants } = await stateRes.json();
   const bob = participants.find((p: { displayName: string }) => p.displayName === "Bob");
   const alice = participants.find((p: { displayName: string }) => p.displayName === "Alice");
-  return { code, token, bobToken, bobId: bob.id, aliceId: alice.id };
+  return { code, token, bobToken: bobToken!, bobId: bob.id, aliceId: alice.id };
 }
 
 describe("DELETE /api/tournaments/[code]/participants/[id]", () => {

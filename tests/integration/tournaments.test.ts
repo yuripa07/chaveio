@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { testPrisma, resetDb } from "./helpers";
 import {
   createTournament,
-  createGoogleTournament,
+  createUserAndSession,
   joinTournament,
   getTournament,
   startTournament,
@@ -18,9 +18,9 @@ afterAll(async () => {
   await testPrisma.$disconnect();
 });
 
-describe("POST /api/tournaments (Google-mode)", () => {
-  it("creates a GOOGLE-mode tournament with creator linked to the user", async () => {
-    const { status, code, token, userId } = await createGoogleTournament({
+describe("POST /api/tournaments", () => {
+  it("creates a tournament with creator linked to the user", async () => {
+    const { status, code, token, userId } = await createTournament({
       name: "Best Country",
       items: ["Brazil", "Japan", "Germany", "France"],
       userName: "Alice",
@@ -33,8 +33,6 @@ describe("POST /api/tournaments (Google-mode)", () => {
       where: { code },
       include: { items: true, participants: true },
     });
-    expect(tournament.authMode).toBe("GOOGLE");
-    expect(tournament.passwordHash).toBeNull();
     expect(tournament.creatorUserId).toBe(userId);
     expect(tournament.items).toHaveLength(4);
     expect(tournament.participants).toHaveLength(1);
@@ -80,7 +78,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("rejects non-power-of-2 item counts", async () => {
-    const { status } = await createGoogleTournament({
+    const { status } = await createTournament({
       name: "Bad Tournament",
       items: ["A", "B", "C"],
       userName: "Bob",
@@ -89,7 +87,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("rejects item count above 32", async () => {
-    const { status } = await createGoogleTournament({
+    const { status } = await createTournament({
       name: "Too Big",
       items: Array.from({ length: 64 }, (_, i) => `Item ${i}`),
       userName: "Bob",
@@ -98,7 +96,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("rejects missing name", async () => {
-    const { status } = await createGoogleTournament({
+    const { status } = await createTournament({
       name: "",
       items: ["A", "B", "C", "D"],
     });
@@ -106,7 +104,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("rejects roundNames with wrong length", async () => {
-    const { status } = await createGoogleTournament({
+    const { status } = await createTournament({
       items: ["A", "B", "C", "D"],
       roundNames: ["Semifinals"],
     });
@@ -114,7 +112,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("accepts roundNames with correct length and stores them", async () => {
-    const { status, code } = await createGoogleTournament({
+    const { status, code } = await createTournament({
       items: ["A", "B", "C", "D"],
       roundNames: ["Semifinal", "Final"],
     });
@@ -125,7 +123,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("generates correct bracket structure for 8 items (3 rounds)", async () => {
-    const { code } = await createGoogleTournament({
+    const { code } = await createTournament({
       items: ["A", "B", "C", "D", "E", "F", "G", "H"],
     });
 
@@ -149,7 +147,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("generates bracket (rounds + matches + slots) at creation for 4 items", async () => {
-    const { code } = await createGoogleTournament({
+    const { code } = await createTournament({
       items: ["Brazil", "Japan", "Germany", "France"],
     });
 
@@ -169,7 +167,7 @@ describe("POST /api/tournaments (Google-mode)", () => {
   });
 
   it("GET tournament in LOBBY returns bracket with rounds and matches", async () => {
-    const { code, token } = await createGoogleTournament();
+    const { code, token } = await createTournament();
     const res = await getTournament(code, token);
     const body = await res.json();
     expect(body.rounds).toHaveLength(2);
@@ -178,69 +176,44 @@ describe("POST /api/tournaments (Google-mode)", () => {
 });
 
 describe("POST /api/tournaments/[code]/join", () => {
-  it("rejects first-time join with wrong tournament password", async () => {
-    const { code } = await createTournament({ creatorPassword: "correct" }).then((r) => r.json());
-    const res = await joinTournament(code, { displayName: "NewUser", password: "wrong" });
-    expect(res.status).toBe(401);
-  });
-
-  it("creates a new participant and returns a token", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const res = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    });
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.token).toBeTruthy();
-  });
-
-  it("re-issues token when same name + correct password", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    await joinTournament(code, { displayName: "Bob", password: "pass123" });
-    const res = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.token).toBeTruthy();
-  });
-
-  it("returns 401 for wrong password", async () => {
-    const { code } = await createTournament().then((r) => r.json());
-    const res = await joinTournament(code, {
-      displayName: "Bob",
-      password: "wrong",
-    });
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 404 for unknown tournament code", async () => {
-    const res = await joinTournament("XXXXXX", {
-      displayName: "Bob",
-      password: "pass123",
-    });
-    expect(res.status).toBe(404);
-  });
-
-  it("returns 400 when displayName or password is missing", async () => {
-    const { code } = await createTournament().then((r) => r.json());
+  it("returns 401 without a session cookie", async () => {
+    const { code } = await createTournament();
     const { POST } = await import("@/app/api/tournaments/[code]/join/route");
     const { NextRequest } = await import("next/server");
     const res = await POST(
       new NextRequest(`http://localhost/api/tournaments/${code}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: "Bob" }),
+        body: JSON.stringify({}),
       }),
       { params: Promise.resolve({ code }) }
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
+  });
+
+  it("creates a new participant and returns a token", async () => {
+    const { code } = await createTournament();
+    const { response, token } = await joinTournament(code, { userName: "Bob" });
+    expect(response.status).toBe(201);
+    expect(token).toBeTruthy();
+  });
+
+  it("re-issues token when the same user joins again", async () => {
+    const { code } = await createTournament();
+    const bob = await createUserAndSession({ name: "Bob" });
+    await joinTournament(code, { session: bob });
+    const { response, token } = await joinTournament(code, { session: bob });
+    expect(response.status).toBe(200);
+    expect(token).toBeTruthy();
+  });
+
+  it("returns 404 for unknown tournament code", async () => {
+    const { response } = await joinTournament("XXXXXX", { userName: "Bob" });
+    expect(response.status).toBe(404);
   });
 
   it("returns 403 when joining a FINISHED tournament as new participant", async () => {
-    const { code, token: creatorToken } = await createTournament().then((r) => r.json());
+    const { code, token: creatorToken } = await createTournament();
     await submitFullBracketPicks(creatorToken, code);
     await startTournament(code, creatorToken);
 
@@ -262,20 +235,17 @@ describe("POST /api/tournaments/[code]/join", () => {
       }
     }
 
-    const res = await joinTournament(code, { displayName: "NewUser", password: "pass123" });
-    expect(res.status).toBe(403);
+    const { response } = await joinTournament(code, { userName: "NewUser" });
+    expect(response.status).toBe(403);
   });
 });
 
 describe("GET /api/tournaments/[code]", () => {
   it("returns tournament state with participants", async () => {
-    const { code, token } = await createTournament().then((r) => r.json());
-    const { token: bobToken } = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    }).then((r) => r.json());
+    const { code, token } = await createTournament();
+    const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
 
-    const res = await getTournament(code, bobToken);
+    const res = await getTournament(code, bobToken!);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.tournament.code).toBe(code);
@@ -285,25 +255,24 @@ describe("GET /api/tournaments/[code]", () => {
   });
 
   it("returns 401 without token", async () => {
-    const { code } = await createTournament().then((r) => r.json());
+    const { code } = await createTournament();
     const res = await getTournament(code, null);
     expect(res.status).toBe(401);
   });
 
   it("returns 404 for a non-existent code", async () => {
-    const { token } = await createTournament().then((r) => r.json());
+    const { token } = await createTournament();
     const res = await getTournament("ZZZZZZ", token);
     expect(res.status).toBe(404);
   });
 
   it("returns 403 when token belongs to a different tournament", async () => {
-    const { code: code1 } = await createTournament().then((r) => r.json());
+    const { code: code1 } = await createTournament();
     const { token: strangerToken } = await createTournament({
       name: "Other",
       items: ["W", "X", "Y", "Z"],
-      creatorName: "Stranger",
-      creatorPassword: "pw",
-    }).then((r) => r.json());
+      userName: "Stranger",
+    });
 
     const res = await getTournament(code1, strangerToken);
     expect(res.status).toBe(403);

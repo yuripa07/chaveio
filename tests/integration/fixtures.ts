@@ -4,11 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
-import { generateFirstRoundPairs, getFeederMatches } from "@/lib/bracket";
-import { computeRoundPoints } from "@/lib/points";
-import { generateCode } from "@/lib/codes";
-import { signToken } from "@/lib/auth";
+import { getFeederMatches } from "@/lib/bracket";
 import { SESSION_COOKIE, signSession } from "@/lib/session";
 import { testPrisma } from "./helpers";
 
@@ -35,7 +31,7 @@ function req(
   });
 }
 
-// ---- Users / sessions (for Google-mode flows) ----
+// ---- Users / sessions ----
 
 export async function createUserAndSession(opts: {
   name?: string;
@@ -61,68 +57,11 @@ export async function createUserAndSession(opts: {
 
 // ---- Tournaments ----
 
-type CreateTournamentBody = {
-  name?: string;
-  items?: string[];
-  creatorName?: string;
-  creatorPassword?: string;
-  roundNames?: string[];
-};
-
 /**
- * Creates a legacy PASSWORD-mode tournament via direct Prisma inserts.
- * This simulates an existing production tournament that predates Google auth —
- * used to exercise the legacy password join path in regression tests.
- * Returns a Response-shaped object so existing call sites (res.json()) keep working.
+ * Creates a Google-mode tournament by calling the real POST /api/tournaments route
+ * with a session cookie. Returns {code, token, sessionCookie, userId}.
  */
-export async function createTournament(body: CreateTournamentBody = {}) {
-  const name = body.name ?? "Best Country";
-  const items = body.items ?? ["Brazil", "Japan", "Germany", "France"];
-  const creatorName = body.creatorName ?? "Alice";
-  const creatorPassword = body.creatorPassword ?? "pass123";
-  const roundNames = body.roundNames;
-
-  if (!isPowerOfTwo(items.length)) {
-    return Response.json(
-      { error: "Number of candidates must be 4, 8, 16, or 32." },
-      { status: 400 }
-    );
-  }
-
-  const totalRounds = Math.log2(items.length);
-  if (roundNames && roundNames.length !== totalRounds) {
-    return Response.json(
-      { error: `Tournament must have exactly ${totalRounds} round themes.` },
-      { status: 400 }
-    );
-  }
-
-  const code = await generateUniqueCode();
-  const passwordHash = await bcrypt.hash(creatorPassword, 10);
-
-  const { tournamentId, participantId } = await insertLegacyTournament({
-    code,
-    name,
-    passwordHash,
-    items,
-    roundNames: roundNames ?? [],
-    creatorName,
-  });
-
-  const token = await signToken({
-    participantId,
-    tournamentId,
-    isCreator: true,
-  });
-
-  return Response.json({ code, token }, { status: 201 });
-}
-
-/**
- * Creates a GOOGLE-mode tournament by calling the real POST /api/tournaments route
- * with a session cookie. Returns {code, token, sessionCookie, userId, user}.
- */
-export async function createGoogleTournament(
+export async function createTournament(
   opts: {
     name?: string;
     items?: string[];
@@ -150,29 +89,21 @@ export async function createGoogleTournament(
   );
   const payload = await res.json();
   return {
+    response: res,
     status: res.status,
     code: payload.code as string,
     token: payload.token as string,
     sessionCookie: user.sessionCookie,
     userId: user.userId,
+    error: payload.error as string | undefined,
   };
 }
 
-export async function joinTournament(
-  code: string,
-  body: { displayName: string; password: string }
-) {
-  const { POST } = await import("@/app/api/tournaments/[code]/join/route");
-  return POST(req("POST", `/api/tournaments/${code}/join`, body), {
-    params: Promise.resolve({ code }),
-  });
-}
-
 /**
- * Joins a GOOGLE-mode tournament with a session cookie (no body).
+ * Joins a tournament with a Google session cookie.
  * If `session` is not provided, a new User + session is created.
  */
-export async function joinTournamentWithGoogle(
+export async function joinTournament(
   code: string,
   opts: {
     session?: { sessionCookie: string; userId: string };
@@ -183,34 +114,19 @@ export async function joinTournamentWithGoogle(
     ? { sessionCookie: opts.session.sessionCookie, userId: opts.session.userId }
     : await createUserAndSession({ name: opts.userName ?? "Participant" });
   const { POST } = await import("@/app/api/tournaments/[code]/join/route");
+  const response = await POST(
+    req("POST", `/api/tournaments/${code}/join`, {}, { sessionCookie: user.sessionCookie }),
+    { params: Promise.resolve({ code }) }
+  );
+  const payload =
+    response.status < 400 ? ((await response.json()) as { token?: string }) : null;
   return {
-    response: await POST(
-      req("POST", `/api/tournaments/${code}/join`, {}, { sessionCookie: user.sessionCookie }),
-      { params: Promise.resolve({ code }) }
-    ),
+    response,
+    status: response.status,
+    token: payload?.token,
     sessionCookie: user.sessionCookie,
     userId: user.userId,
   };
-}
-
-export async function linkGoogleToParticipant(
-  code: string,
-  opts: {
-    sessionCookie: string;
-    displayName: string;
-    password: string;
-  }
-) {
-  const { POST } = await import("@/app/api/tournaments/[code]/link-google/route");
-  return POST(
-    req(
-      "POST",
-      `/api/tournaments/${code}/link-google`,
-      { displayName: opts.displayName, password: opts.password },
-      { sessionCookie: opts.sessionCookie }
-    ),
-    { params: Promise.resolve({ code }) }
-  );
 }
 
 export async function getTournament(code: string, token: string | null) {
@@ -341,109 +257,4 @@ export async function submitFullBracketPicks(token: string, code: string) {
   }
 
   return submitPicks(token, { tournamentCode: code, picks });
-}
-
-// ---- Internals ----
-
-function isPowerOfTwo(n: number) {
-  return n >= 4 && n <= 32 && (n & (n - 1)) === 0;
-}
-
-async function generateUniqueCode(): Promise<string> {
-  for (let i = 0; i < 10; i++) {
-    const candidate = generateCode();
-    const exists = await testPrisma.tournament.findUnique({ where: { code: candidate } });
-    if (!exists) return candidate;
-  }
-  throw new Error("Failed to generate unique tournament code");
-}
-
-async function insertLegacyTournament(params: {
-  code: string;
-  name: string;
-  passwordHash: string;
-  items: string[];
-  roundNames: string[];
-  creatorName: string;
-}) {
-  const { code, name, passwordHash, items, roundNames, creatorName } = params;
-  const n = items.length;
-  const numRounds = Math.log2(n);
-
-  return testPrisma.$transaction(async (tx) => {
-    const tournament = await tx.tournament.create({
-      data: {
-        code,
-        name,
-        passwordHash,
-        authMode: "PASSWORD",
-        roundNames: JSON.stringify(roundNames),
-        items: {
-          create: items.map((itemName, i) => ({ name: itemName, seed: i + 1 })),
-        },
-      },
-      include: { items: { orderBy: { seed: "asc" } } },
-    });
-
-    const participant = await tx.participant.create({
-      data: {
-        tournamentId: tournament.id,
-        displayName: creatorName,
-        isCreator: true,
-      },
-    });
-
-    const rounds = await Promise.all(
-      Array.from({ length: numRounds }, (_, i) => {
-        const roundNumber = i + 1;
-        return tx.round.create({
-          data: {
-            tournamentId: tournament.id,
-            roundNumber,
-            name: roundNames[i] ?? null,
-            status: "PENDING",
-            pointValue: computeRoundPoints(roundNumber, numRounds, n),
-          },
-        });
-      })
-    );
-
-    const pairs = generateFirstRoundPairs(n);
-    await Promise.all(
-      pairs.map(([seed1, seed2], i) => {
-        const item1 = tournament.items.find((it) => it.seed === seed1)!;
-        const item2 = tournament.items.find((it) => it.seed === seed2)!;
-        return tx.match.create({
-          data: {
-            tournamentId: tournament.id,
-            roundId: rounds[0].id,
-            matchNumber: i + 1,
-            slots: {
-              create: [
-                { itemId: item1.id, position: 1 },
-                { itemId: item2.id, position: 2 },
-              ],
-            },
-          },
-        });
-      })
-    );
-
-    for (let r = 1; r < numRounds; r++) {
-      const matchCount = n / Math.pow(2, r + 1);
-      await Promise.all(
-        Array.from({ length: matchCount }, (_, i) =>
-          tx.match.create({
-            data: {
-              tournamentId: tournament.id,
-              roundId: rounds[r].id,
-              matchNumber: i + 1,
-            },
-          })
-        )
-      );
-    }
-
-    return { tournamentId: tournament.id, participantId: participant.id };
-  });
 }

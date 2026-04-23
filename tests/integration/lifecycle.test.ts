@@ -18,12 +18,9 @@ afterAll(async () => {
 
 
 async function setup() {
-  const { code, token: creatorToken } = await createTournament().then((r) => r.json());
-  const { token: bobToken } = await joinTournament(code, {
-    displayName: "Bob",
-    password: "pass123",
-  }).then((r) => r.json());
-  return { code, creatorToken, bobToken };
+  const { code, token: creatorToken } = await createTournament();
+  const { token: bobToken } = await joinTournament(code, { userName: "Bob" });
+  return { code, creatorToken, bobToken: bobToken! };
 }
 
 async function getTournamentFromDb(code: string) {
@@ -226,6 +223,7 @@ describe("POST /api/tournaments/[code]/matches/[id]/winner", () => {
       { params: Promise.resolve({ code: code2, id: match.id }) }
     );
     expect(res.status).toBe(404);
+    void code1;
   });
 
   it("finishes tournament when final match resolves", async () => {

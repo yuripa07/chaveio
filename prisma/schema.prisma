@@ -28,8 +28,6 @@ model Tournament {
   id            String    @id @default(cuid())
   code          String    @unique
   name          String
-  passwordHash  String?
-  authMode      String    @default("PASSWORD")
   creatorUserId String?
   roundNames    String    @default("[]")
   status        String    @default("LOBBY")

@@ -1,6 +1,6 @@
 {
   "name": "www",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -23,7 +23,6 @@
     "@types/pg": "^8.20.0",
     "@vercel/analytics": "^2.0.1",
     "arctic": "^3.7.0",
-    "bcryptjs": "^3.0.3",
     "jose": "^6.2.2",
     "lucide-react": "^1.7.0",
     "next": "16.2.3",
@@ -35,7 +34,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

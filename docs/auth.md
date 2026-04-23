@@ -1,6 +1,6 @@
 # Auth
 
-Chaveio runs two independent tokens side by side. This page explains why, how they interact, and how legacy password tournaments keep working.
+Chaveio runs two independent tokens side by side. This page explains why and how they interact.
 
 ---
 
@@ -17,21 +17,10 @@ Neither token is required for anonymous endpoints like `GET /api/tournaments/[co
 
 ---
 
-## Tournament `authMode`
-
-`Tournament.authMode` is either `PASSWORD` or `GOOGLE`.
-
-- **`GOOGLE`** (default for every new tournament). `passwordHash` is `null`. `creatorUserId` links to the creator `User`. `Participant.userId` is set on every join.
-- **`PASSWORD`** (legacy). `passwordHash` is set. Existing rows that pre-date this feature get `PASSWORD` automatically via the migration default, and everything continues to work with zero changes on the client. Participants may later opt in to `/link-google`.
-
-The public `GET /api/tournaments/[code]/check` returns `{ exists, status, authMode }`, so the lobby can pick the correct UI before prompting for any credentials.
-
----
-
 ## Environment variables
 
-- `JWT_SECRET` — tournament token signing (pre-existing).
-- `SESSION_SECRET` — user session signing (new).
+- `JWT_SECRET` — tournament token signing.
+- `SESSION_SECRET` — user session signing.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
 
 See `.env.example`. Local dev uses `http://localhost:3000/api/auth/google/callback`; production points at the deployed origin.
@@ -72,45 +61,13 @@ The `chaveio_oauth_flow` cookie is signed, short-lived (5 min), and carries `{st
 
 ## Joining a tournament
 
-`POST /api/tournaments/[code]/join` branches on `tournament.authMode`:
+`POST /api/tournaments/[code]/join` requires `chaveio_session`. The body is ignored.
 
-### `GOOGLE` mode
-
-- Requires `chaveio_session`. The body is ignored.
 - Looks up a `Participant` by `(tournamentId, userId)`. If absent, creates one with `displayName = user.name` (or `"Participant"`), appending `" 2"`, `" 3"`, … on displayName collisions.
-- Blocks joins when `status === FINISHED`; honors `joinedAtRound` when `ACTIVE` (same as password mode).
+- Blocks joins when `status === FINISHED`; sets `joinedAtRound` to the active round when the tournament is `ACTIVE`.
 - Returns the tournament JWT.
 
-### `PASSWORD` mode (legacy)
-
-- `{displayName, password}` body, as before.
-- Additional guard: if the matched `Participant` has `userId != null` **and** the caller's session (if any) doesn't match, returns 401 `"This participant is protected with Google. Sign in with Google to continue."` This closes the impersonation window after a user opts into linking.
-
----
-
-## Linking a Google account to a legacy Participant
-
-`POST /api/tournaments/[code]/link-google` (session required):
-
-1. Verify `tournament.authMode === "PASSWORD"`.
-2. Verify the submitted `password` with `bcrypt.compare` — both returning-user and first-time-user cases must 401 on a bad password (see `docs/backend-conventions.md §8`).
-3. Look up the `Participant` by `(tournamentId, displayName)`.
-4. Reject with 409 if that participant is already linked to a **different** user.
-5. Reject with 409 if the session's user is already linked to a **different** participant in this tournament.
-6. Otherwise set `participant.userId = session.userId` and issue a fresh tournament JWT.
-
-The operation is idempotent — re-linking the same user to the same participant is a no-op that still returns a fresh token.
-
----
-
-## Legacy-tournament guarantees
-
-Everything that shipped before this feature keeps working:
-
-- The migration is purely additive (new `User` table, new nullable columns, relaxed `Tournament.passwordHash NOT NULL`). Existing rows stay on `authMode = "PASSWORD"` and `userId = NULL`.
-- The tournament JWT shape (`{participantId, tournamentId, isCreator}`) is unchanged, so tokens already in users' `localStorage` continue to verify.
-- `POST /api/tournaments/[code]/join` still accepts the old `{displayName, password}` body unchanged.
-- The only new 401 path is the "protected with Google" guard — triggered exclusively when a participant has been explicitly linked via `/link-google`.
+Re-joining the same tournament is idempotent: returns 200 with the same `participantId` and a fresh JWT.
 
 ---
 
@@ -119,11 +76,11 @@ Everything that shipped before this feature keeps working:
 | Component | Role |
 |---|---|
 | `src/contexts/user-context.tsx` | `<UserProvider>` fetches `/api/auth/me` on mount; exposes `{user, ready, logout, refresh}`. |
-| `src/components/google-sign-in-button.tsx` | Plain `<a>` to `/api/auth/google/start?returnTo=…` (full-page nav — do not use `fetch`). |
-| `src/components/user-chip.tsx` | Header avatar + dropdown (sign out). Click-outside + Escape handling. |
+| `src/components/google-sign-in-button.tsx` | Plain `<a>` to `/api/auth/google/start?returnTo=…` (full-page nav — do not use `fetch`). Primary variant wraps the colored G in a white circle for contrast on indigo. |
+| `src/components/app-header.tsx` | Global sticky header — brand on the left, user dropdown (avatar + theme + locale + sign-out) on the right, or `GoogleSignInButton` when signed out. Mounted once in `src/app/layout.tsx`. |
 | `src/app/page.tsx` | Landing page: gates the "Create tournament" CTA on `user`; shows auth errors from `?auth_error=`. |
-| `src/app/tournament/new/page.tsx` | Requires `user`; creator form no longer collects name/password. |
-| `src/app/tournament/[code]/page.tsx` | Branches on `authMode` + session state (see `docs/frontend-conventions.md §14`). |
+| `src/app/tournament/new/page.tsx` | Requires `user`; creator form collects name + items only. |
+| `src/app/tournament/[code]/page.tsx` | Shows auto-join spinner or `GoogleSignInButton` depending on session state. |
 
 ---
 

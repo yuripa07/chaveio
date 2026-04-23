@@ -18,11 +18,10 @@ afterAll(async () => {
 });
 
 async function setupTournament() {
-  const createRes = await createTournament({
+  const { code, token } = await createTournament({
     name: "Reorder Test",
     items: ["Alpha", "Bravo", "Charlie", "Delta"],
   });
-  const { code, token } = await createRes.json();
   const stateRes = await getTournament(code, token);
   const { items } = await stateRes.json();
   return { code, token, items };
@@ -73,14 +72,10 @@ describe("PATCH /api/tournaments/[code]/items/order", () => {
 
   it("returns 403 for a non-creator participant", async () => {
     const { code, items } = await setupTournament();
-    const joinRes = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    });
-    const { token: participantToken } = await joinRes.json();
+    const { token: participantToken } = await joinTournament(code, { userName: "Bob" });
 
     const ids = items.map((i: { id: string }) => i.id);
-    const res = await reorderItems(code, participantToken, ids);
+    const res = await reorderItems(code, participantToken!, ids);
     expect(res.status).toBe(403);
   });
 
@@ -99,12 +94,8 @@ describe("PATCH /api/tournaments/[code]/items/order", () => {
   it("returns 409 when a participant has submitted picks", async () => {
     const { code, token, items } = await setupTournament();
 
-    const joinRes = await joinTournament(code, {
-      displayName: "Bob",
-      password: "pass123",
-    });
-    const { token: participantToken } = await joinRes.json();
-    await submitFullBracketPicks(participantToken, code);
+    const { token: participantToken } = await joinTournament(code, { userName: "Bob" });
+    await submitFullBracketPicks(participantToken!, code);
 
     const ids = items.map((i: { id: string }) => i.id);
     const res = await reorderItems(code, token, ids);

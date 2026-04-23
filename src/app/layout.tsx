@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/contexts/locale-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { UserProvider } from "@/contexts/user-context";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AppHeader } from "@/components/app-header";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -26,8 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <LocaleProvider>
             <UserProvider>
+              <AppHeader />
               {children}
-              <LocaleSwitcher />
             </UserProvider>
           </LocaleProvider>
         </ThemeProvider>
