@@ -66,7 +66,7 @@ export default function BracketView({
               </div>
             );
           })}
-          <div className="px-4 pb-2">
+          <div className="px-4 pb-2" style={{ width: BRACKET_COLUMN_WIDTH + 32 }}>
             <span className="inline-flex items-center gap-1.5 py-0.5 text-xxs font-bold uppercase tracking-widest text-zinc-400">
               <Trophy className="h-3 w-3" />
               {t.bracketView.champion}
