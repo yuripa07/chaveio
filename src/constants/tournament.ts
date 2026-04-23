@@ -24,3 +24,4 @@ export const TOURNAMENT_CODE_LENGTH = 6;
 export const POLL_INTERVAL_LOBBY = 3000;
 export const POLL_INTERVAL_BRACKET = 5000;
 export const POLL_INTERVAL_RESULTS = 4000;
+export const POLL_INTERVAL_LIVE = 4000;
