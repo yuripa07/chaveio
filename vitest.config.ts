@@ -9,6 +9,7 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts"],
     env: {
       JWT_SECRET: "test-secret-for-vitest",
+      SESSION_SECRET: "test-session-secret-for-vitest",
     },
     coverage: {
       provider: "v8",

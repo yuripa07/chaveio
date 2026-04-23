@@ -16,8 +16,9 @@ March Madness-style bracket prediction app for team bonding events. Participants
 | Styles | Tailwind CSS 4 |
 | Database | SQLite (dev) / PostgreSQL Neon (prod) |
 | ORM | Prisma 7 |
-| Auth | JWT per tournament via `jose` (HS256, 30d expiry) |
-| Password hashing | bcryptjs (10 rounds) |
+| Auth | Google OAuth (user session cookie) + JWT per tournament via `jose` (HS256, 30d expiry) |
+| OAuth client | `arctic` (Google provider, PKCE) |
+| Password hashing | bcryptjs (10 rounds) — legacy PASSWORD-mode tournaments only |
 | Icons | lucide-react |
 | Class merging | tailwind-merge (`cn()` helper) |
 | Tests | Vitest |
@@ -62,11 +63,17 @@ src/
 │   │       ├── results/page.tsx          # Leaderboard + bracket view
 │   │       └── results/loading.tsx       # Results skeleton
 │   └── api/
-│       ├── tournaments/route.ts          # POST create
+│       ├── auth/
+│       │   ├── google/start/route.ts     # GET — sets flow cookie, 302s to Google
+│       │   ├── google/callback/route.ts  # GET — upserts User, sets session cookie
+│       │   ├── logout/route.ts           # POST — clears session cookie
+│       │   └── me/route.ts               # GET — returns { user | null } for UserProvider
+│       ├── tournaments/route.ts          # POST create (requires session)
 │       └── tournaments/[code]/
-│           ├── route.ts                  # GET tournament state
-│           ├── check/route.ts            # GET exists? (public, no auth)
-│           ├── join/route.ts             # POST join
+│           ├── route.ts                  # GET tournament state (includes authMode + participant.userId)
+│           ├── check/route.ts            # GET exists? (public) — returns { exists, status, authMode }
+│           ├── join/route.ts             # POST join — branches on tournament.authMode (PASSWORD | GOOGLE)
+│           ├── link-google/route.ts      # POST link a Google session to a password-mode Participant
 │           ├── start/route.ts            # POST start (creator)
 │           ├── rankings/route.ts         # GET leaderboard (dense ranking)
 │           ├── items/
@@ -77,8 +84,11 @@ src/
 │               └── winner/route.ts       # POST set winner (creator)
 │       └── picks/route.ts               # GET/POST picks
 ├── lib/
-│   ├── api-utils.ts         # handleRequest() — auth + body parsing helper for API routes
+│   ├── api-utils.ts         # handleRequest() (tournament token) + handleUserRequest() (session cookie) helpers
 │   ├── auth.ts              # signToken, verifyToken, requireParticipant, requireCreator, AuthError
+│   ├── session.ts           # signSession, verifySession, requireUser, getOptionalUser, setSessionCookie, clearSessionCookie
+│   ├── oauth.ts             # arctic.Google wrapper: getAuthUrl(), validateAuthorizationCode(), userinfo fetch
+│   ├── oauth-flow-cookie.ts # issueFlowCookie / consumeFlowCookie — signed short-lived state + PKCE verifier
 │   ├── bracket.ts           # seedPositions, generateFirstRoundPairs, getNextRoundSlot, getFeederMatches
 │   ├── bracket-client.ts    # augmentRounds, clearDownstream (client-side bracket logic)
 │   ├── cn.ts                # cn() — twMerge wrapper
@@ -91,13 +101,16 @@ src/
 │   └── token-storage.ts     # getStoredToken, setStoredToken (try-catch wrappers)
 ├── contexts/
 │   ├── locale-context.tsx    # LocaleProvider, useLocale() — i18n context
-│   └── theme-context.tsx     # ThemeProvider, useTheme() — light/dark/system theme
+│   ├── theme-context.tsx     # ThemeProvider, useTheme() — light/dark/system theme
+│   └── user-context.tsx      # UserProvider, useUser() — Google session state (fetches /api/auth/me)
 ├── hooks/
 │   ├── use-polling.ts        # usePolling() — interval + AbortController cleanup
 │   ├── use-require-participant.ts # useRequireParticipant() — auth guard hook for protected pages
 │   └── use-tournament-token.ts # useTournamentToken() — localStorage JWT management
 ├── components/
 │   ├── bracket-view.tsx       # SVG bracket visualization (pick/predict/view modes)
+│   ├── google-sign-in-button.tsx  # Full-page anchor to /api/auth/google/start (primary/secondary variants)
+│   ├── user-chip.tsx          # Header avatar + dropdown (sign out)
 │   ├── back-link.tsx         # Back navigation arrow
 │   ├── error-alert.tsx       # Red error banner
 │   ├── form-field.tsx        # Labeled input wrapper
@@ -145,18 +158,20 @@ tests/
 docs/
 ├── frontend-conventions.md   # Frontend patterns and rules
 ├── backend-conventions.md    # Backend patterns and rules
+├── auth.md                   # Google OAuth + two-token model, linking flow, legacy guarantees
 └── i18n.md                   # i18n: adding strings, API error translation, locale detection
 ```
 
 ## Database Models
 
-8 models with cascading deletes on `tournamentId`:
+9 models with cascading deletes on `tournamentId`:
 
 | Model | Key Fields | Relations |
 |-------|-----------|-----------|
-| `Tournament` | `code` (unique), `status`, `roundNames` (JSON) | 1->N: items, participants, matches, rounds |
+| `User` | `googleSub` (unique), `email`, `name`, `avatarUrl`, `locale`, `tier` (FREE), `lastLoginAt` | 1->N: participants, tournamentsCreated |
+| `Tournament` | `code` (unique), `status`, `authMode` (`PASSWORD` \| `GOOGLE`), `passwordHash` (nullable), `creatorUserId`, `roundNames` (JSON) | 1->N: items, participants, matches, rounds; N->1: creator (User, optional) |
 | `TournamentItem` | `name`, `seed` (1-indexed) | N->1: tournament; 1->N: matchSlots, picks |
-| `Participant` | `displayName`, `passwordHash`, `isCreator`, `hasSubmittedPicks`, `joinedAtRound` | N->1: tournament; 1->N: picks |
+| `Participant` | `displayName`, `passwordHash`, `isCreator`, `hasSubmittedPicks`, `joinedAtRound`, `userId` (nullable) | N->1: tournament, user (optional); 1->N: picks; `@@unique([tournamentId, userId])` (NULLs distinct) |
 | `Round` | `roundNumber` (1-indexed), `status`, `pointValue` | N->1: tournament; 1->N: matches |
 | `Match` | `matchNumber`, `status`, `winnerId` (nullable) | N->1: tournament, round; 1->N: slots, picks |
 | `MatchSlot` | `position` (1 or 2), `itemId` | N->1: match, item; unique (matchId, position) |
@@ -169,22 +184,53 @@ docs/
 
 ## Auth
 
-JWT payload: `{ participantId, tournamentId, isCreator }`
-Signed with `JWT_SECRET` env var (HS256). Stored in `localStorage` on client.
-Header: `Authorization: Bearer <token>`
+Two independent tokens coexist — see `docs/auth.md` for the full flow.
 
-- `requireParticipant(req)` — verifies token, returns payload. Throws `AuthError`.
-- `requireCreator(req)` — same + checks `isCreator`. Throws `AuthError`.
-- `AuthError(message, status)` — custom error with HTTP status code.
+| Token | Storage | Shape | Lifetime | Purpose |
+|---|---|---|---|---|
+| **User session** | HttpOnly cookie `chaveio_session` | `{ userId, v: 1 }` | 30d | Google-authenticated human; spans tournaments. |
+| **Tournament token** | `localStorage["chaveio_token_<CODE>"]` | `{ participantId, tournamentId, isCreator }` | 30d | Single-tournament identity. Header: `Authorization: Bearer <token>`. |
+
+Tournament tokens signed with `JWT_SECRET`; sessions signed with `SESSION_SECRET` (rotatable independently). Both HS256 via `jose`.
+
+Tournaments have an `authMode`:
+- `GOOGLE` (default for all new tournaments) — creator and participants must have a session. No password.
+- `PASSWORD` (legacy, still honored) — displayName + password join, as before. Participants can opt into linking their Google account via `POST /api/tournaments/[code]/link-google`; once linked, password-only login for that displayName is rejected.
+
+Helpers (in `src/lib/auth.ts` and `src/lib/session.ts`):
+
+- `requireParticipant(req)` / `requireCreator(req)` — tournament token; throw `AuthError`.
+- `requireUser(req)` / `getOptionalUser(req)` — session cookie; throw `AuthError` (or return null).
+- `signSession(payload)` / `verifySession(jwt)` / `setSessionCookie` / `clearSessionCookie`.
+- `handleRequest(req, role, {parseBody?})` — tournament-token routes (auth + body).
+- `handleUserRequest(req, {parseBody?})` — session routes (auth + body).
+
+### OAuth flow (Google)
+
+1. Landing / lobby / new-tournament pages render `<GoogleSignInButton returnTo=…>` — a plain `<a>` to `/api/auth/google/start`.
+2. `/api/auth/google/start` generates `state` + PKCE `codeVerifier` via `arctic`, stores them in a signed short-lived `chaveio_oauth_flow` cookie (5 min TTL), and 302s to Google.
+3. `/api/auth/google/callback` consumes the flow cookie (validating `state`), exchanges the code, fetches userinfo, upserts `User` by `googleSub`, sets `chaveio_session`, and 302s back to the allowlisted `returnTo` path.
+4. Client `UserProvider` calls `GET /api/auth/me` on mount.
+
+### Env vars
+
+- `JWT_SECRET` — tournament token signing (existing).
+- `SESSION_SECRET` — user session signing (new).
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
 
 ## API Routes
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/tournaments` | -- | Create tournament + bracket, return `{ code, token }` |
-| GET | `/api/tournaments/[code]` | Token | Full tournament state (items, participants, rounds/matches/slots) |
-| GET | `/api/tournaments/[code]/check` | -- | Public existence check `{ exists, status }` |
-| POST | `/api/tournaments/[code]/join` | -- | Join (password auth), return `{ token }` |
+| GET | `/api/auth/google/start` | -- | Issue flow cookie, 302 to Google consent |
+| GET | `/api/auth/google/callback` | Flow cookie | Exchange code, upsert User, set session cookie, 302 to `returnTo` |
+| POST | `/api/auth/logout` | -- | Clear session cookie |
+| GET | `/api/auth/me` | Session (optional) | `{ user: { id, email, name, avatarUrl, tier } \| null }` |
+| POST | `/api/tournaments` | Session | Create GOOGLE-mode tournament + bracket, return `{ code, token }` (tournament token) |
+| GET | `/api/tournaments/[code]` | Token | Full tournament state (includes `authMode` + `participant.userId`) |
+| GET | `/api/tournaments/[code]/check` | -- | Public existence check `{ exists, status, authMode }` |
+| POST | `/api/tournaments/[code]/join` | Varies | Branches on `authMode`: `PASSWORD` needs `{displayName, password}`; `GOOGLE` needs session cookie. Returns `{ token }`. |
+| POST | `/api/tournaments/[code]/link-google` | Session + password | Link signed-in user to a legacy Participant in a PASSWORD tournament. Returns fresh `{ token }`. |
 | POST | `/api/tournaments/[code]/start` | Creator | Activate round 1, set tournament ACTIVE |
 | PATCH | `/api/tournaments/[code]/items/order` | Creator | Reorder bracket items (seeds + round-1 slots); blocked if any picks submitted |
 | DELETE | `/api/tournaments/[code]/participants/[id]` | Creator | Kick a participant (any status); their picks cascade-delete |

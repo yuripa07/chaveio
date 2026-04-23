@@ -11,6 +11,7 @@ export async function resetDb() {
   await testPrisma.participant.deleteMany();
   await testPrisma.tournamentItem.deleteMany();
   await testPrisma.tournament.deleteMany();
+  await testPrisma.user.deleteMany();
 }
 
 export function setupTestDb() {

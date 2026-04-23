@@ -22,6 +22,7 @@ export async function GET(
           isCreator: true,
           hasSubmittedPicks: true,
           joinedAtRound: true,
+          userId: true,
         },
       },
       rounds: {

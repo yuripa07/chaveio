@@ -25,6 +25,7 @@ export type Participant = {
   isCreator: boolean;
   hasSubmittedPicks: boolean;
   joinedAtRound?: number | null;
+  userId?: string | null;
 };
 
 export type PickResult = {
@@ -47,6 +48,7 @@ export type TournamentCore = {
   name: string;
   status: string;
   theme?: string;
+  authMode?: string;
 };
 
 export type TournamentState = {

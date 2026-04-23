@@ -10,6 +10,7 @@ Reusable hooks live in `src/hooks/`. Use them instead of reimplementing patterns
 
 - **`useTournamentToken(code)`** — reads JWT from localStorage, decodes participantId/isCreator
 - **`usePolling(callback, interval, enabled)`** — interval with automatic AbortController cleanup
+- **`useUser()`** (from `src/contexts/user-context.tsx`) — Google session state: `{ user, ready, refresh, logout }`. Mounted via `<UserProvider>` in `src/app/layout.tsx`. Always gate UI on `ready` before branching on `user`.
 
 ```typescript
 // Token management
@@ -201,3 +202,41 @@ Reusable components live in `src/components/`. Always check if one exists before
 | `lobby-cta.tsx` | Lobby call-to-action |
 
 Shared Tailwind classes are in `constants/styles.ts` (`INPUT_CLASS`, `PRIMARY_BUTTON_CLASS`).
+
+---
+
+## 12. Google Sign-In (`GoogleSignInButton`)
+
+Use `<GoogleSignInButton returnTo="…" />` from `src/components/google-sign-in-button.tsx` anywhere we need to trigger the OAuth flow. Variants: `primary` (default) or `secondary`.
+
+```tsx
+<GoogleSignInButton returnTo={`/tournament/${code}`} />
+<GoogleSignInButton variant="secondary" returnTo="/" />
+```
+
+Implementation notes:
+- It's a real `<a>` tag (full-page navigation), not `fetch`. This is intentional — the browser must follow the 302 to Google and carry the `Set-Cookie` response back. `fetch`/`router.push` would not work.
+- `returnTo` is allowlisted server-side (`^/(?:tournament(?:/[A-Z0-9]+)?|)?$`) — absolute URLs and other paths are rejected.
+
+## 13. Session-gated UI
+
+`useUser()` returns `{ user, ready, logout, refresh }`. Never render auth-sensitive UI before `ready` is true (the initial `/api/auth/me` fetch is still in flight). The root layout already wraps the tree in `<UserProvider>`.
+
+```tsx
+const { user, ready } = useUser();
+if (!ready) return <Spinner />;
+return user ? <SignedInExperience /> : <GoogleSignInButton returnTo={…} />;
+```
+
+For cross-tab sign-out, call `useUser().logout()` — it POSTs `/api/auth/logout` and refreshes the session state.
+
+## 14. Two-token awareness on the lobby
+
+`src/app/tournament/[code]/page.tsx` reads `authMode` from `GET /api/tournaments/[code]/check` (public) before deciding the no-token UI:
+
+- `GOOGLE` + no session → show `GoogleSignInButton`.
+- `GOOGLE` + session + no tournament token → auto-`POST /join` with `credentials: "same-origin"`, persist the returned token via `setTokenFromResponse`.
+- `PASSWORD` + no session → password join form + secondary `GoogleSignInButton`.
+- `PASSWORD` + session + tournament token + `participant.userId == null` → "Protect with Google" CTA, which posts to `/api/tournaments/[code]/link-google` with `{displayName, password}` and swaps in the fresh token.
+
+When adding new session-sensitive features on the lobby, follow the same branch structure — do not assume `authMode` without reading `/check` first.

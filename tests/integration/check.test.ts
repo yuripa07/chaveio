@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { testPrisma, resetDb } from "./helpers";
-import { createTournament, startTournament, joinTournament, submitFullBracketPicks } from "./fixtures";
+import {
+  createTournament,
+  createGoogleTournament,
+  startTournament,
+  joinTournament,
+  submitFullBracketPicks,
+} from "./fixtures";
 
 beforeEach(async () => {
   await resetDb();
@@ -57,5 +63,19 @@ describe("GET /api/tournaments/[code]/check", () => {
     const { code } = await createTournament().then((r) => r.json());
     const res = await checkCode(code);
     expect(res.status).toBe(200);
+  });
+
+  it("returns authMode=PASSWORD for legacy tournaments", async () => {
+    const { code } = await createTournament().then((r) => r.json());
+    const res = await checkCode(code);
+    const body = await res.json();
+    expect(body.authMode).toBe("PASSWORD");
+  });
+
+  it("returns authMode=GOOGLE for Google-mode tournaments", async () => {
+    const { code } = await createGoogleTournament();
+    const res = await checkCode(code);
+    const body = await res.json();
+    expect(body.authMode).toBe("GOOGLE");
   });
 });
