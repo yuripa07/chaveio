@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleRequest } from "@/lib/api-utils";
-import { generateFirstRoundPairs } from "@/lib/bracket";
 
 export async function PATCH(
   req: NextRequest,
@@ -76,8 +75,6 @@ export async function PATCH(
     );
   }
 
-  const n = tournament.items.length;
-  const pairs = generateFirstRoundPairs(n);
   const round1 = tournament.rounds[0];
 
   await prisma.$transaction(async (tx) => {
@@ -85,28 +82,24 @@ export async function PATCH(
       itemIds.map((itemId, index) =>
         tx.tournamentItem.update({
           where: { id: itemId },
-          data: { seed: index + 1 },
+          data: { position: index + 1 },
         })
       )
     );
 
-    const seedToItemId = new Map<number, string>(
-      itemIds.map((itemId, index) => [index + 1, itemId])
-    );
-
     await Promise.all(
-      pairs.map(([seed1, seed2], i) => {
-        const match = round1.matches.find((m) => m.matchNumber === i + 1)!;
+      round1.matches.map((match) => {
+        const i = match.matchNumber - 1;
         const slot1 = match.slots.find((s) => s.position === 1)!;
         const slot2 = match.slots.find((s) => s.position === 2)!;
         return Promise.all([
           tx.matchSlot.update({
             where: { id: slot1.id },
-            data: { itemId: seedToItemId.get(seed1)! },
+            data: { itemId: itemIds[i * 2] },
           }),
           tx.matchSlot.update({
             where: { id: slot2.id },
-            data: { itemId: seedToItemId.get(seed2)! },
+            data: { itemId: itemIds[i * 2 + 1] },
           }),
         ]);
       })

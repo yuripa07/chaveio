@@ -70,14 +70,6 @@ export function ReorderableSlotItem({
       >
         <GripVertical className="h-3.5 w-3.5" />
       </span>
-      <span
-        className={cn(
-          "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold",
-          isWinner ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
-        )}
-      >
-        {item.seed}
-      </span>
       <span className={cn("truncate text-sm font-medium", isLoser && "line-through")}>
         {item.name}
       </span>

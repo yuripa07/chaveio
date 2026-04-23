@@ -325,9 +325,6 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
               <ul className="space-y-1.5">
                 {items.map((item) => (
                   <li key={item.id} className="flex items-center gap-2 text-sm">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-xxs font-bold text-zinc-500 dark:text-zinc-400">
-                      {item.seed}
-                    </span>
                     <span className="text-zinc-700 dark:text-zinc-300">{item.name}</span>
                   </li>
                 ))}

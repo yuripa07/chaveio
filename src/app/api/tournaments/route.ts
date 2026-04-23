@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateCode } from "@/lib/codes";
 import { signToken } from "@/lib/auth";
-import { generateFirstRoundPairs } from "@/lib/bracket";
+
 import { computeRoundPoints } from "@/lib/points";
 import { handleUserRequest } from "@/lib/api-utils";
 
@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
         creatorUserId: user.id,
         roundNames: JSON.stringify(roundNames ?? []),
         items: {
-          create: items.map((itemName, i) => ({ name: itemName, seed: i + 1 })),
+          create: items.map((itemName, i) => ({ name: itemName, position: i + 1 })),
         },
       },
-      include: { items: { orderBy: { seed: "asc" } } },
+      include: { items: { orderBy: { position: "asc" } } },
     });
 
     const participant = await tx.participant.create({
@@ -90,7 +90,6 @@ export async function POST(req: NextRequest) {
 
     const n = newTournament.items.length;
     const numRounds = Math.log2(n);
-    const pairs = generateFirstRoundPairs(n);
     let parsedRoundNames: string[] = [];
     try {
       parsedRoundNames = JSON.parse(newTournament.roundNames || "[]");
@@ -112,23 +111,29 @@ export async function POST(req: NextRequest) {
     );
 
     await Promise.all(
-      pairs.map(([seed1, seed2], i) => {
-        const item1 = newTournament.items.find((it) => it.seed === seed1)!;
-        const item2 = newTournament.items.find((it) => it.seed === seed2)!;
-        return tx.match.create({
-          data: {
-            tournamentId: newTournament.id,
-            roundId: rounds[0].id,
-            matchNumber: i + 1,
-            slots: {
-              create: [
-                { itemId: item1.id, position: 1 },
-                { itemId: item2.id, position: 2 },
-              ],
-            },
+      newTournament.items
+        .reduce<Array<[typeof newTournament.items[number], typeof newTournament.items[number]]>>(
+          (acc, item, i) => {
+            if (i % 2 === 0) acc.push([item, newTournament.items[i + 1]]);
+            return acc;
           },
-        });
-      })
+          []
+        )
+        .map(([item1, item2], i) =>
+          tx.match.create({
+            data: {
+              tournamentId: newTournament.id,
+              roundId: rounds[0].id,
+              matchNumber: i + 1,
+              slots: {
+                create: [
+                  { itemId: item1.id, position: 1 },
+                  { itemId: item2.id, position: 2 },
+                ],
+              },
+            },
+          })
+        )
     );
 
     for (let r = 1; r < numRounds; r++) {

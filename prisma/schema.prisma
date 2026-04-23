@@ -46,7 +46,7 @@ model TournamentItem {
   id           String @id @default(cuid())
   tournamentId String
   name         String
-  seed         Int
+  position     Int
 
   tournament Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   matchSlots MatchSlot[]

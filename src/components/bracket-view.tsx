@@ -172,14 +172,6 @@ export default function BracketView({
                                 !isWinner && !isLoser && !isSelected && !isPickable && "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
                               )}
                             >
-                              <span
-                                className={cn(
-                                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold",
-                                  isWinner ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400" : isSelected ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
-                                )}
-                              >
-                                {item.seed}
-                              </span>
                               <span className={cn("truncate text-sm font-medium", isLoser && "line-through")}>
                                 {item.name}
                               </span>
@@ -224,9 +216,6 @@ export default function BracketView({
                   className="flex items-center gap-2 px-3"
                   style={{ height: BRACKET_ITEM_HEIGHT }}
                 >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xxs font-bold bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400">
-                    {champion.seed}
-                  </span>
                   <span className="truncate text-sm font-medium text-emerald-700 dark:text-emerald-400">
                     {champion.name}
                   </span>
