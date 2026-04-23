@@ -87,7 +87,7 @@ src/
 │   ├── session.ts           # signSession, verifySession, requireUser, getOptionalUser, setSessionCookie, clearSessionCookie
 │   ├── oauth.ts             # arctic.Google wrapper: getAuthUrl(), validateAuthorizationCode(), userinfo fetch
 │   ├── oauth-flow-cookie.ts # issueFlowCookie / consumeFlowCookie — signed short-lived state + PKCE verifier
-│   ├── bracket.ts           # seedPositions, generateFirstRoundPairs, getNextRoundSlot, getFeederMatches
+│   ├── bracket.ts           # getNextRoundSlot, getFeederMatches
 │   ├── bracket-client.ts    # augmentRounds, clearDownstream (client-side bracket logic)
 │   ├── cn.ts                # cn() — twMerge wrapper
 │   ├── codes.ts             # generateCode (6-char, no ambiguous: 0OI1)
@@ -167,7 +167,7 @@ docs/
 |-------|-----------|-----------|
 | `User` | `googleSub` (unique), `email`, `name`, `avatarUrl`, `locale`, `tier` (FREE), `lastLoginAt` | 1->N: participants, tournamentsCreated |
 | `Tournament` | `code` (unique), `status`, `creatorUserId`, `roundNames` (JSON) | 1->N: items, participants, matches, rounds; N->1: creator (User, optional) |
-| `TournamentItem` | `name`, `seed` (1-indexed) | N->1: tournament; 1->N: matchSlots, picks |
+| `TournamentItem` | `name`, `position` (1-indexed, insertion order) | N->1: tournament; 1->N: matchSlots, picks |
 | `Participant` | `displayName`, `isCreator`, `hasSubmittedPicks`, `joinedAtRound`, `userId` (nullable) | N->1: tournament, user (optional); 1->N: picks; `@@unique([tournamentId, userId])` (NULLs distinct) |
 | `Round` | `roundNumber` (1-indexed), `status`, `pointValue` | N->1: tournament; 1->N: matches |
 | `Match` | `matchNumber`, `status`, `winnerId` (nullable) | N->1: tournament, round; 1->N: slots, picks |
@@ -243,9 +243,7 @@ Example for 16 items: 1 -> 2 -> 4 -> **16** pts; max = **40 pts**
 
 ## Bracket Logic
 
-**Seeding** (`seedPositions(n)`): alternating complement pairing.
-- n=4 -> `[1, 4, 3, 2]` (matches: 1v4, 3v2)
-- n=8 -> `[1, 8, 5, 4, 3, 6, 7, 2]`
+**Pairing**: items are matched consecutively by `position` (insertion order). Position 1 vs 2, 3 vs 4, etc. Creator can reorder in the lobby before anyone submits picks.
 
 **Advancement** (`getNextRoundSlot(matchNumber)`):
 - `matchIndex = Math.floor((M - 1) / 2)`, `slotPosition = M % 2 === 1 ? 1 : 2`

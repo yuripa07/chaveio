@@ -120,7 +120,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
         if (newState) {
           setState(newState);
           setLocalItems(newState.items);
-          // Clear picks so the creator re-fills the bracket against the new seeding
+          // Clear picks so the creator re-fills the bracket against the new order
           setPicks({});
         }
       }
@@ -307,9 +307,6 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
               <DragOverlay dropAnimation={null}>
                 {activeItem && (
                   <div className="flex items-center gap-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 px-3 py-2 shadow-lg scale-[1.02] text-sm">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-xxs font-bold text-zinc-500 dark:text-zinc-400">
-                      {activeItem.seed}
-                    </span>
                     <span className="text-zinc-700 dark:text-zinc-300">{activeItem.name}</span>
                   </div>
                 )}

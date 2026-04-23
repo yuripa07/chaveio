@@ -28,10 +28,10 @@ async function setupTournament() {
 }
 
 describe("PATCH /api/tournaments/[code]/items/order", () => {
-  it("reorders items: updates seeds and round-1 match slots", async () => {
+  it("reorders items: updates positions and round-1 match slots (consecutive pairing)", async () => {
     const { code, token, items } = await setupTournament();
 
-    // Reverse the item order
+    // Reverse the item order: [Delta, Charlie, Bravo, Alpha]
     const reversedIds: string[] = [...items]
       .reverse()
       .map((i: { id: string }) => i.id);
@@ -40,27 +40,26 @@ describe("PATCH /api/tournaments/[code]/items/order", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
 
-    // Seeds should reflect new positions
+    // Positions should reflect new order
     const updatedItems = await testPrisma.tournamentItem.findMany({
       where: { tournament: { code } },
-      orderBy: { seed: "asc" },
+      orderBy: { position: "asc" },
     });
     expect(updatedItems.map((i) => i.id)).toEqual(reversedIds);
 
-    // Round-1 slots must match generateFirstRoundPairs(4) = [[1,4],[3,2]]
-    // After reverse: reversedIds[0]=seed1, reversedIds[1]=seed2, reversedIds[2]=seed3, reversedIds[3]=seed4
-    // Match 1: seed1 (reversedIds[0]) vs seed4 (reversedIds[3])
-    // Match 2: seed3 (reversedIds[2]) vs seed2 (reversedIds[1])
+    // Round-1 slots must use consecutive pairing:
+    // Match 1: position 1 (reversedIds[0]) vs position 2 (reversedIds[1])
+    // Match 2: position 3 (reversedIds[2]) vs position 4 (reversedIds[3])
     const round1Matches = await testPrisma.match.findMany({
       where: { round: { roundNumber: 1, tournament: { code } } },
       include: { slots: { orderBy: { position: "asc" } } },
       orderBy: { matchNumber: "asc" },
     });
 
-    expect(round1Matches[0].slots[0].itemId).toBe(reversedIds[0]); // seed 1
-    expect(round1Matches[0].slots[1].itemId).toBe(reversedIds[3]); // seed 4
-    expect(round1Matches[1].slots[0].itemId).toBe(reversedIds[2]); // seed 3
-    expect(round1Matches[1].slots[1].itemId).toBe(reversedIds[1]); // seed 2
+    expect(round1Matches[0].slots[0].itemId).toBe(reversedIds[0]); // position 1
+    expect(round1Matches[0].slots[1].itemId).toBe(reversedIds[1]); // position 2
+    expect(round1Matches[1].slots[0].itemId).toBe(reversedIds[2]); // position 3
+    expect(round1Matches[1].slots[1].itemId).toBe(reversedIds[3]); // position 4
   });
 
   it("returns 401 without a token", async () => {

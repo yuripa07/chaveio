@@ -289,9 +289,6 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
                                 : "opacity-50 cursor-not-allowed"
                             )}
                           >
-                            <span className="rounded-lg bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                              #{item.seed}
-                            </span>
                             <span className="font-semibold leading-tight">{item.name}</span>
                           </button>
                         );

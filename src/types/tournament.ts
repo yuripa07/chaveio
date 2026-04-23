@@ -1,4 +1,4 @@
-export type TournamentItem = { id: string; name: string; seed: number };
+export type TournamentItem = { id: string; name: string; position: number };
 
 export type MatchSlot = { id: string; itemId: string; position: number };
 
