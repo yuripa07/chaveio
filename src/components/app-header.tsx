@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, Monitor, Moon, Settings, Sun, Trophy } from "lucide-react";
+import { ChevronLeft, LogOut, Monitor, Moon, Settings, Sun, Trophy } from "lucide-react";
 import { useLocale } from "@/contexts/locale-context";
 import { useTheme, type Theme } from "@/contexts/theme-context";
 import { useUser } from "@/contexts/user-context";
 import { cn } from "@/lib/cn";
 import type { Locale } from "@/locales/translations";
+
+type AppHeaderProps = {
+  backHref?: string;
+  backLabel?: string;
+  title?: string;
+  subtitle?: string;
+  rightSlot?: React.ReactNode;
+};
 
 const THEME_OPTIONS: { value: Theme; Icon: typeof Sun }[] = [
   { value: "light", Icon: Sun },
@@ -20,22 +28,61 @@ const LOCALE_OPTIONS: { value: Locale; label: string }[] = [
   { value: "en", label: "EN" },
 ];
 
-export function AppHeader() {
+export function AppHeader({
+  backHref,
+  backLabel,
+  title,
+  subtitle,
+  rightSlot,
+}: AppHeaderProps = {}) {
   const { user, ready } = useUser();
   const { t } = useLocale();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-100 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-sm font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50"
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white">
-            <Trophy className="h-4 w-4" />
-          </span>
-          {t.appHeader.brand}
-        </Link>
+    <header className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+      <div className="mx-auto flex min-h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
+        {backHref ? (
+          <Link
+            href={backHref}
+            className="flex shrink-0 items-center gap-1 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">{backLabel}</span>
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2 text-sm font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white">
+              <Trophy className="h-4 w-4" />
+            </span>
+            <span className="hidden sm:inline">{t.appHeader.brand}</span>
+          </Link>
+        )}
+
+        {backHref && title && (
+          <div className="h-5 w-px shrink-0 bg-zinc-200 dark:bg-zinc-700" />
+        )}
+
+        {title ? (
+          <div className="flex-1 min-w-0">
+            {subtitle && (
+              <p className="font-mono text-xs font-semibold tracking-widest text-zinc-400 leading-none mb-0.5">
+                {subtitle}
+              </p>
+            )}
+            <h1 className="truncate text-base font-extrabold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50">
+              {title}
+            </h1>
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        {rightSlot && (
+          <div className="flex shrink-0 items-center gap-2">{rightSlot}</div>
+        )}
 
         {ready ? (
           user ? (
@@ -44,7 +91,7 @@ export function AppHeader() {
             <SettingsMenu />
           )
         ) : (
-          <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+          <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
         )}
       </div>
     </header>
@@ -74,7 +121,7 @@ function SettingsMenu() {
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -88,7 +135,7 @@ function SettingsMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg"
+          className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg z-50"
         >
           <PreferenceSections />
         </div>
@@ -126,7 +173,7 @@ function UserMenu() {
   const initial = label.charAt(0).toUpperCase();
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -141,7 +188,7 @@ function UserMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg"
+          className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg z-50"
         >
           <div className="flex items-center gap-3 px-4 py-4">
             <Avatar user={user} initial={initial} size="lg" />

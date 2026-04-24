@@ -10,7 +10,7 @@ import { translateApiError } from "@/lib/translate-api-error";
 import { cn } from "@/lib/cn";
 import { INPUT_CLASS } from "@/constants/styles";
 import { VALID_TOURNAMENT_SIZES, MAX_TOURNAMENT_SIZE } from "@/constants/tournament";
-import { BackLink } from "@/components/back-link";
+import { AppHeader } from "@/components/app-header";
 import { FormField } from "@/components/form-field";
 import { ErrorAlert } from "@/components/error-alert";
 import { Spinner } from "@/components/spinner";
@@ -120,9 +120,7 @@ export default function NewTournament() {
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-        <BackLink href="/" label={t.common.back} />
-      </div>
+      <AppHeader backHref="/" backLabel={t.common.back} />
 
       <div className="flex flex-1 justify-center px-6 py-10">
         <div className="w-full max-w-lg space-y-8">

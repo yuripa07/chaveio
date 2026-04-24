@@ -8,6 +8,7 @@ import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 import { Spinner } from "@/components/spinner";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { cn } from "@/lib/cn";
+import { AppHeader } from "@/components/app-header";
 import { useLocale } from "@/contexts/locale-context";
 import { useUser } from "@/contexts/user-context";
 
@@ -80,7 +81,8 @@ function HomeContent() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-6 py-24">
+      <AppHeader />
+      <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-6 py-16">
         <div className="w-full max-w-sm space-y-10 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-none">
