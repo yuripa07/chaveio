@@ -81,7 +81,7 @@ export default function HistoryPage() {
               </div>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.history.noTournaments}</p>
               <Link
-                href="/"
+                href="/tournament/new"
                 className="mt-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
               >
                 {t.landing.createTournament}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, LogOut, Monitor, Moon, Settings, Sun, Trophy } from "lucide-react";
+import { ChevronLeft, History, LogOut, Monitor, Moon, Settings, Sun, Trophy } from "lucide-react";
 import { useLocale } from "@/contexts/locale-context";
 import { useTheme, type Theme } from "@/contexts/theme-context";
 import { useUser } from "@/contexts/user-context";
@@ -200,6 +200,18 @@ function UserMenu() {
                 {user.email}
               </p>
             </div>
+          </div>
+
+          <div className="border-t border-zinc-100 dark:border-zinc-800">
+            <Link
+              href="/history"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              role="menuitem"
+            >
+              <History className="h-4 w-4" />
+              {t.history.title}
+            </Link>
           </div>
 
           <PreferenceSections />
