@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PlusCircle, LogIn, Trophy, AlertCircle } from "lucide-react";
+import { PlusCircle, LogIn, Trophy, AlertCircle, History } from "lucide-react";
 import { TOURNAMENT_CODE_LENGTH } from "@/constants/tournament";
 import { Spinner } from "@/components/spinner";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
@@ -109,13 +109,22 @@ function HomeContent() {
             {ready && !user ? (
               <GoogleSignInButton returnTo="/" />
             ) : (
-              <Link
-                href="/tournament/new"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition"
-              >
-                <PlusCircle className="h-4 w-4" />
-                {t.landing.createTournament}
-              </Link>
+              <>
+                <Link
+                  href="/tournament/new"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-[.98] transition"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  {t.landing.createTournament}
+                </Link>
+                <Link
+                  href="/history"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[.98] transition"
+                >
+                  <History className="h-4 w-4" />
+                  {t.history.title}
+                </Link>
+              </>
             )}
 
             <div className="relative py-2">
