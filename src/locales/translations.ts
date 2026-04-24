@@ -156,6 +156,7 @@ export interface Translations {
   appHeader: {
     brand: string;
     openMenu: string;
+    openSettings: string;
     accountSection: string;
     themeSection: string;
     languageSection: string;
@@ -320,6 +321,7 @@ export const ptBR: Translations = {
   appHeader: {
     brand: "Chaveio",
     openMenu: "Abrir menu",
+    openSettings: "Abrir configurações",
     accountSection: "Conta",
     themeSection: "Tema",
     languageSection: "Idioma",
@@ -518,6 +520,7 @@ export const en: Translations = {
   appHeader: {
     brand: "Chaveio",
     openMenu: "Open menu",
+    openSettings: "Open settings",
     accountSection: "Account",
     themeSection: "Theme",
     languageSection: "Language",

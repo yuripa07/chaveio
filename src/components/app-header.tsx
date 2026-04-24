@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, Monitor, Moon, Sun, Trophy } from "lucide-react";
-import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { LogOut, Monitor, Moon, Settings, Sun, Trophy } from "lucide-react";
 import { useLocale } from "@/contexts/locale-context";
 import { useTheme, type Theme } from "@/contexts/theme-context";
 import { useUser } from "@/contexts/user-context";
@@ -42,11 +41,7 @@ export function AppHeader() {
           user ? (
             <UserMenu />
           ) : (
-            <GoogleSignInButton
-              variant="secondary"
-              className="!w-auto !py-2 !px-3 !text-xs"
-              label={t.auth.signInWithGoogle}
-            />
+            <SettingsMenu />
           )
         ) : (
           <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
@@ -56,10 +51,55 @@ export function AppHeader() {
   );
 }
 
+function SettingsMenu() {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("mousedown", handleClick);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t.appHeader.openSettings}
+      >
+        <Settings className="h-4 w-4" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg"
+        >
+          <PreferenceSections />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UserMenu() {
   const { user, logout } = useUser();
-  const { locale, setLocale, t } = useLocale();
-  const { theme, setTheme } = useTheme();
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -115,50 +155,7 @@ function UserMenu() {
             </div>
           </div>
 
-          <MenuSection label={t.appHeader.themeSection}>
-            <div className="flex overflow-hidden rounded-full border border-zinc-200 dark:border-zinc-700">
-              {THEME_OPTIONS.map(({ value, Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTheme(value)}
-                  className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium transition-colors",
-                    theme === value
-                      ? "bg-indigo-600 text-white"
-                      : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                  )}
-                  aria-pressed={theme === value}
-                  aria-label={t.theme[value]}
-                  title={t.theme[value]}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{t.theme[value]}</span>
-                </button>
-              ))}
-            </div>
-          </MenuSection>
-
-          <MenuSection label={t.appHeader.languageSection}>
-            <div className="flex overflow-hidden rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-semibold">
-              {LOCALE_OPTIONS.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setLocale(value)}
-                  className={cn(
-                    "flex-1 px-3 py-1.5 transition-colors",
-                    locale === value
-                      ? "bg-indigo-600 text-white"
-                      : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                  )}
-                  aria-pressed={locale === value}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </MenuSection>
+          <PreferenceSections />
 
           <div className="border-t border-zinc-100 dark:border-zinc-800">
             <button
@@ -180,14 +177,63 @@ function UserMenu() {
   );
 }
 
-function MenuSection({ label, children }: { label: string; children: React.ReactNode }) {
+function PreferenceSections() {
+  const { locale, setLocale, t } = useLocale();
+  const { theme, setTheme } = useTheme();
+
   return (
-    <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-3">
-      <p className="mb-2 text-xxs font-bold uppercase tracking-wider text-zinc-400">
-        {label}
-      </p>
-      {children}
-    </div>
+    <>
+      <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-3">
+        <p className="mb-2 text-xxs font-bold uppercase tracking-wider text-zinc-400">
+          {t.appHeader.themeSection}
+        </p>
+        <div className="flex overflow-hidden rounded-full border border-zinc-200 dark:border-zinc-700">
+          {THEME_OPTIONS.map(({ value, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTheme(value)}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium transition-colors",
+                theme === value
+                  ? "bg-indigo-600 text-white"
+                  : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              )}
+              aria-pressed={theme === value}
+              aria-label={t.theme[value]}
+              title={t.theme[value]}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{t.theme[value]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-3">
+        <p className="mb-2 text-xxs font-bold uppercase tracking-wider text-zinc-400">
+          {t.appHeader.languageSection}
+        </p>
+        <div className="flex overflow-hidden rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-semibold">
+          {LOCALE_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setLocale(value)}
+              className={cn(
+                "flex-1 px-3 py-1.5 transition-colors",
+                locale === value
+                  ? "bg-indigo-600 text-white"
+                  : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              )}
+              aria-pressed={locale === value}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
