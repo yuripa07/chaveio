@@ -51,13 +51,15 @@ export async function GET(
       totalPoints: pointsMap.get(p.id) ?? 0,
       rank: 0,
     }))
-    .sort((a, b) => b.totalPoints - a.totalPoints);
+    .sort((a, b) =>
+      b.totalPoints !== a.totalPoints
+        ? b.totalPoints - a.totalPoints
+        : a.displayName.localeCompare(b.displayName)
+    );
 
-  let rank = 1;
-  for (let i = 0; i < sorted.length; i++) {
-    if (i > 0 && sorted[i].totalPoints < sorted[i - 1].totalPoints) rank = i + 1;
-    sorted[i].rank = rank;
-  }
+  sorted.forEach((entry, i) => {
+    entry.rank = i + 1;
+  });
 
   return Response.json({ rankings: sorted });
 }
