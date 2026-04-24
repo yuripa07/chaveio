@@ -161,6 +161,18 @@ export interface Translations {
     themeSection: string;
     languageSection: string;
   };
+  history: {
+    title: string;
+    subtitle: string;
+    noTournaments: string;
+    creatorBadge: string;
+    participantBadge: string;
+    statusLobby: string;
+    statusActive: string;
+    statusFinished: string;
+    viewTournament: string;
+    participantCount: (n: number) => string;
+  };
   apiErrors: Record<string, string>;
 }
 
@@ -325,6 +337,18 @@ export const ptBR: Translations = {
     accountSection: "Conta",
     themeSection: "Tema",
     languageSection: "Idioma",
+  },
+  history: {
+    title: "Meus torneios",
+    subtitle: "Torneios que você criou ou participou",
+    noTournaments: "Você ainda não participou de nenhum torneio.",
+    creatorBadge: "Criador",
+    participantBadge: "Participante",
+    statusLobby: "Sala de espera",
+    statusActive: "Em andamento",
+    statusFinished: "Finalizado",
+    viewTournament: "Ver torneio",
+    participantCount: (n) => `${n} participante${n !== 1 ? "s" : ""}`,
   },
   apiErrors: {
     "Invalid request body.": "Requisição inválida.",
@@ -524,6 +548,18 @@ export const en: Translations = {
     accountSection: "Account",
     themeSection: "Theme",
     languageSection: "Language",
+  },
+  history: {
+    title: "My tournaments",
+    subtitle: "Tournaments you created or joined",
+    noTournaments: "You haven't joined any tournaments yet.",
+    creatorBadge: "Creator",
+    participantBadge: "Participant",
+    statusLobby: "Waiting room",
+    statusActive: "In progress",
+    statusFinished: "Finished",
+    viewTournament: "View tournament",
+    participantCount: (n) => `${n} participant${n !== 1 ? "s" : ""}`,
   },
   apiErrors: {},
 };
