@@ -76,7 +76,7 @@ describe("validateBracketPicks — 4-item full bracket", () => {
       rounds: make4ItemRounds(),
       joinedAtRound: null,
     });
-    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid result");
     expect(result.error).toMatch(/missing/i);
   });
 
@@ -90,7 +90,7 @@ describe("validateBracketPicks — 4-item full bracket", () => {
       rounds: make4ItemRounds(),
       joinedAtRound: null,
     });
-    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid result");
     expect(result.error).toMatch(/invalid/i);
   });
 
@@ -104,7 +104,7 @@ describe("validateBracketPicks — 4-item full bracket", () => {
       rounds: make4ItemRounds(),
       joinedAtRound: null,
     });
-    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid result");
     expect(result.error).toMatch(/cascade|invalid/i);
   });
 });
@@ -201,7 +201,7 @@ describe("validateBracketPicks — edge cases", () => {
       rounds: make4ItemRounds(),
       joinedAtRound: null,
     });
-    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid result");
     expect(result.error).toMatch(/missing/i);
   });
 });
@@ -342,7 +342,7 @@ describe("validateBracketPicks — late joiner", () => {
       rounds,
       joinedAtRound: 1,
     });
-    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid result");
     expect(result.error).toMatch(/cascade/i);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "chaveio:theme";
 
@@ -12,22 +12,56 @@ type ThemeContextValue = {
   setTheme: (theme: Theme) => void;
 };
 
+function isTheme(value: string | null): value is Theme {
+  return value === "light" || value === "dark" || value === "system";
+}
+
 function detectTheme(): Theme {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "dark" || stored === "system") return stored;
+    if (isTheme(stored)) return stored;
   } catch {}
   return "system";
 }
 
-function resolveTheme(theme: Theme): "light" | "dark" {
-  if (theme !== "system") return theme;
+const themeListeners = new Set<() => void>();
+
+function subscribeTheme(callback: () => void): () => void {
+  themeListeners.add(callback);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === STORAGE_KEY) callback();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    themeListeners.delete(callback);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function persistTheme(next: Theme) {
   try {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    localStorage.setItem(STORAGE_KEY, next);
+  } catch {}
+  for (const cb of themeListeners) cb();
+}
+
+const getThemeServerSnapshot = (): Theme => "system";
+
+function subscribePrefersDark(callback: () => void): () => void {
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  mediaQuery.addEventListener("change", callback);
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
+function getPrefersDarkSnapshot(): boolean {
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   } catch {
-    return "light";
+    return false;
   }
 }
+
+const getPrefersDarkServerSnapshot = () => false;
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: "system",
@@ -36,51 +70,26 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const theme = useSyncExternalStore(subscribeTheme, detectTheme, getThemeServerSnapshot);
+  const prefersDark = useSyncExternalStore(
+    subscribePrefersDark,
+    getPrefersDarkSnapshot,
+    getPrefersDarkServerSnapshot,
+  );
+
+  const resolvedTheme: "light" | "dark" =
+    theme === "system" ? (prefersDark ? "dark" : "light") : theme;
 
   useEffect(() => {
-    const detected = detectTheme();
-    setThemeState(detected);
-  }, []);
-
-  useEffect(() => {
-    const resolved = resolveTheme(theme);
-    setResolvedTheme(resolved);
-
-    if (resolved === "dark") {
+    if (resolvedTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {}
-
-    if (theme !== "system") return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      const next = e.matches ? "dark" : "light";
-      setResolvedTheme(next);
-      if (next === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme]);
-
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-  }, []);
+  }, [resolvedTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme: persistTheme }}>
       {children}
     </ThemeContext.Provider>
   );

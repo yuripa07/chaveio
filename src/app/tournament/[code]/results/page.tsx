@@ -47,16 +47,18 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
     return { tournamentData, picks, rankings: rankingsData };
   }, [code, clearToken]);
 
+  const authToken = auth.ready ? auth.token : null;
+
   // Initial load
   useEffect(() => {
-    if (!auth.ready) return;
-    loadData(auth.token).then((result) => {
+    if (authToken === null) return;
+    loadData(authToken).then((result) => {
       if (!result) return;
       setState(result.tournamentData);
       setMyPicks(result.picks);
       setRankings(result.rankings);
     });
-  }, [auth.ready, auth.ready ? auth.token : null, code, loadData]);
+  }, [authToken, code, loadData]);
 
   // Poll until finished
   usePolling(
