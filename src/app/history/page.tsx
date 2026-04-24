@@ -27,8 +27,8 @@ function statusBadgeClass(status: HistoryEntry["status"]) {
   return "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400";
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -36,7 +36,7 @@ function formatDate(iso: string) {
 }
 
 export default function HistoryPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { user, ready } = useUser();
   const [tournaments, setTournaments] = useState<HistoryEntry[] | null>(null);
   const [error, setError] = useState(false);
@@ -88,7 +88,7 @@ export default function HistoryPage() {
             </div>
           ) : (
             tournaments.map((entry) => (
-              <TournamentCard key={entry.code} entry={entry} t={t} />
+              <TournamentCard key={entry.code} entry={entry} t={t} locale={locale} />
             ))
           )}
         </div>
@@ -126,9 +126,11 @@ function CardsSkeleton() {
 function TournamentCard({
   entry,
   t,
+  locale,
 }: {
   entry: HistoryEntry;
   t: ReturnType<typeof useLocale>["t"];
+  locale: string;
 }) {
   const statusLabel =
     entry.status === "ACTIVE"
@@ -165,7 +167,7 @@ function TournamentCard({
             <Users className="h-3 w-3" />
             {t.history.participantCount(entry.participantCount)}
           </span>
-          <span>{formatDate(date)}</span>
+          <span>{formatDate(date, locale)}</span>
         </div>
       </div>
 
