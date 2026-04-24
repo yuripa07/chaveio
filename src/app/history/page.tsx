@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, ArrowRight, Trophy } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
-import { PageSpinner } from "@/components/page-spinner";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { cn } from "@/lib/cn";
 import { useLocale } from "@/contexts/locale-context";
@@ -62,7 +61,7 @@ export default function HistoryPage() {
       <div className="flex flex-1 flex-col items-center bg-gradient-to-b from-indigo-50 dark:from-indigo-950 to-white dark:to-zinc-950 px-4 py-10">
         <div className="w-full max-w-lg space-y-4">
           {!ready ? (
-            <PageSpinner />
+            <CardsSkeleton />
           ) : !user ? (
             <div className="flex flex-col items-center gap-4 py-12 text-center">
               <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.auth.signInToCreate}</p>
@@ -73,7 +72,7 @@ export default function HistoryPage() {
               {t.common.networkError}
             </p>
           ) : tournaments === null ? (
-            <PageSpinner />
+            <CardsSkeleton />
           ) : tournaments.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-900/40">
@@ -95,6 +94,32 @@ export default function HistoryPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function CardsSkeleton() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-5 py-4 shadow-sm"
+        >
+          <div className="flex-1 space-y-2.5">
+            <div className="h-4 w-40 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+            <div className="flex gap-1.5">
+              <div className="h-5 w-20 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+              <div className="h-5 w-24 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+            </div>
+            <div className="flex gap-3">
+              <div className="h-3.5 w-28 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+              <div className="h-3.5 w-20 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+            </div>
+          </div>
+          <div className="h-8 w-28 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+        </div>
+      ))}
+    </>
   );
 }
 
