@@ -130,9 +130,11 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
     }
   }
 
+  const authToken = auth.ready ? auth.token : null;
+
   useEffect(() => {
-    if (!auth.ready) return;
-    loadState(auth.token).then((newState) => {
+    if (authToken === null) return;
+    loadState(authToken).then((newState) => {
       if (!newState) return;
       if (newState.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -141,7 +143,7 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
       setState(newState);
       setPicks(newState.myPicks);
     });
-  }, [auth.ready, auth.ready ? auth.token : null, code, loadState, router]);
+  }, [authToken, code, loadState, router]);
 
   usePolling(
     async (signal) => {

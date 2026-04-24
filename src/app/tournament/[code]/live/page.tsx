@@ -63,9 +63,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     return { state: (await tournamentRes.json()) as TournamentState, rankings: rankingsData };
   }, [code, clearToken]);
 
+  const authToken = auth.ready ? auth.token : null;
+
   useEffect(() => {
-    if (!auth.ready) return;
-    loadState(auth.token).then((result) => {
+    if (authToken === null) return;
+    loadState(authToken).then((result) => {
       if (!result) return;
       if (result.state.tournament.status === TournamentStatus.FINISHED) {
         router.replace(`/tournament/${code}/results`);
@@ -74,7 +76,7 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setState(result.state);
       setRankings(result.rankings);
     });
-  }, [auth.ready, auth.ready ? auth.token : null, code, loadState, router]);
+  }, [authToken, code, loadState, router]);
 
   usePolling(
     async (signal) => {

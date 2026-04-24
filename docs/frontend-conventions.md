@@ -126,6 +126,8 @@ import { getStoredToken, setStoredToken } from '@/lib/token-storage'
 
 These wrap `localStorage` in try-catch (throws in incognito Safari, storage full, disabled).
 
+**Reading localStorage in React**: never `useState + useEffect` — the React 19 rule `react-hooks/set-state-in-effect` forbids it. Use `useSyncExternalStore` with a server snapshot so SSR and the first hydration render both return the default value, then the real localStorage value takes over post-mount. See `src/hooks/use-tournament-token.ts` (`subscribeStoredToken` / `getStoredToken`) and the contexts in `src/contexts/locale-context.tsx` and `src/contexts/theme-context.tsx` for the pattern. The same pattern applies to other browser-only sources such as `matchMedia`.
+
 ---
 
 ## 8. Polling with usePolling Hook (HIGH)

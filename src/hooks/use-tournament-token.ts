@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { getStoredToken, setStoredToken, clearStoredToken } from "@/lib/token-storage";
+import { useMemo, useSyncExternalStore, useCallback } from "react";
+import {
+  getStoredToken,
+  setStoredToken,
+  clearStoredToken,
+  subscribeStoredToken,
+} from "@/lib/token-storage";
 import { decodeTokenPayload } from "@/lib/token-client";
 
 type TokenState = {
@@ -14,25 +19,31 @@ type TokenState = {
   clearToken: () => void;
 };
 
+const getMountedServerSnapshot = () => false;
+const getMountedClientSnapshot = () => true;
+const getTokenServerSnapshot = () => null;
+
 /**
  * Manages tournament JWT token from localStorage.
  * Automatically decodes participantId and isCreator.
  *
- * token starts as null on every render (SSR-safe). After mount, the stored
- * value is read and tokenReady flips to true. Callers should wait for
- * tokenReady before redirecting on missing token to avoid false redirects
- * during hydration.
+ * Uses useSyncExternalStore so that tokenReady returns false during SSR and
+ * the first hydration render, then flips to true once mounted. Callers
+ * should wait for tokenReady before redirecting on missing token to avoid
+ * false redirects during hydration.
  */
 export function useTournamentToken(code: string): TokenState {
-  // Always null on first render — matches server, avoids hydration mismatch.
-  const [token, setToken] = useState<string | null>(null);
-  const [tokenReady, setTokenReady] = useState(false);
+  const token = useSyncExternalStore(
+    subscribeStoredToken,
+    () => getStoredToken(code),
+    getTokenServerSnapshot,
+  );
 
-  // Read localStorage after mount (browser-only).
-  useEffect(() => {
-    setToken(getStoredToken(code));
-    setTokenReady(true);
-  }, [code]);
+  const tokenReady = useSyncExternalStore(
+    subscribeStoredToken,
+    getMountedClientSnapshot,
+    getMountedServerSnapshot,
+  );
 
   const decoded = useMemo(() => {
     if (!token) return { participantId: null, isCreator: false };
@@ -45,12 +56,10 @@ export function useTournamentToken(code: string): TokenState {
 
   const setTokenFromResponse = useCallback((tournamentCode: string, newToken: string) => {
     setStoredToken(tournamentCode, newToken);
-    setToken(newToken);
   }, []);
 
   const clearToken = useCallback(() => {
     clearStoredToken(code);
-    setToken(null);
   }, [code]);
 
   return {
