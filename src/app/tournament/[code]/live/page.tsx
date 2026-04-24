@@ -6,10 +6,11 @@ import Link from "next/link";
 import { BarChart2, Clock, Swords, Trophy, AlertTriangle, X } from "lucide-react";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
 import { useRequireParticipant } from "@/hooks/use-require-participant";
+import { usePolling } from "@/hooks/use-polling";
 import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/cn";
 import { translateApiError } from "@/lib/translate-api-error";
-import { TournamentStatus, RoundStatus } from "@/constants/tournament";
+import { TournamentStatus, RoundStatus, POLL_INTERVAL_LIVE } from "@/constants/tournament";
 import { TournamentHeader } from "@/components/tournament-header";
 import { KickParticipantDialog } from "@/components/kick-participant-dialog";
 import { LivePageSkeleton } from "@/components/page-spinner";
@@ -48,10 +49,10 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
     if (pendingWinner) dialogRef.current?.focus();
   }, [pendingWinner]);
 
-  const loadState = useCallback(async (authToken: string) => {
+  const loadState = useCallback(async (authToken: string, signal?: AbortSignal) => {
     const [tournamentRes, rankingsRes] = await Promise.all([
-      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` } }),
-      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` } }),
+      fetch(`/api/tournaments/${code}`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
+      fetch(`/api/tournaments/${code}/rankings`, { headers: { Authorization: `Bearer ${authToken}` }, signal }),
     ]);
     if (tournamentRes.status === 401 || tournamentRes.status === 403) {
       clearToken();
@@ -74,6 +75,22 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
       setRankings(result.rankings);
     });
   }, [auth.ready, auth.ready ? auth.token : null, code, loadState, router]);
+
+  usePolling(
+    async (signal) => {
+      if (!auth.ready) return;
+      const result = await loadState(auth.token, signal);
+      if (!result) return;
+      if (result.state.tournament.status === TournamentStatus.FINISHED) {
+        router.replace(`/tournament/${code}/results`);
+        return;
+      }
+      setState(result.state);
+      setRankings(result.rankings);
+    },
+    POLL_INTERVAL_LIVE,
+    auth.ready && !!state,
+  );
 
   async function confirmWinner() {
     if (!token || !pendingWinner) return;
