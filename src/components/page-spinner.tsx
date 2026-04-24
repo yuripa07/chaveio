@@ -18,10 +18,12 @@ export function PageSpinner() {
 export function PageSkeleton() {
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <div className="h-4 w-24 motion-safe:animate-pulse rounded-full bg-zinc-100 dark:bg-zinc-800" />
-          <div className="h-4 w-16 motion-safe:animate-pulse rounded-full bg-zinc-100 dark:bg-zinc-800" />
+      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="mx-auto flex min-h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
+          <div className="h-7 w-7 shrink-0 rounded-lg bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+          <div className="h-4 w-16 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+          <div className="flex-1" />
+          <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
         </div>
       </div>
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-6 py-8">
@@ -34,10 +36,10 @@ export function PageSkeleton() {
   );
 }
 
-function HeaderSkeleton({ maxWidth = "5xl" }: { maxWidth?: "2xl" | "5xl" }) {
+function HeaderSkeleton() {
   return (
-    <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-      <div className={`mx-auto flex items-center gap-3 ${maxWidth === "5xl" ? "max-w-5xl" : "max-w-2xl"}`}>
+    <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+      <div className="mx-auto flex min-h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
         <div className="h-4 w-12 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
         <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-700 shrink-0" />
         <div className="flex-1 space-y-1.5">
@@ -45,6 +47,7 @@ function HeaderSkeleton({ maxWidth = "5xl" }: { maxWidth?: "2xl" | "5xl" }) {
           <div className="h-4 w-40 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
         </div>
         <div className="h-6 w-24 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+        <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
       </div>
     </div>
   );
@@ -53,10 +56,12 @@ function HeaderSkeleton({ maxWidth = "5xl" }: { maxWidth?: "2xl" | "5xl" }) {
 export function LobbyPageSkeleton() {
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <div className="h-4 w-12 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+      <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="mx-auto flex min-h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
+          <div className="h-7 w-7 shrink-0 rounded-lg bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
           <div className="h-4 w-16 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+          <div className="flex-1" />
+          <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
         </div>
       </div>
 

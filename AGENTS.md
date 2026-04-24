@@ -106,10 +106,9 @@ src/
 │   ├── use-require-participant.ts # useRequireParticipant() — auth guard hook for protected pages
 │   └── use-tournament-token.ts # useTournamentToken() — localStorage JWT management
 ├── components/
-│   ├── app-header.tsx         # Global sticky header (brand + user dropdown w/ theme + locale + sign-out); mounted in root layout
+│   ├── app-header.tsx         # Unified per-page header (non-sticky); accepts backHref/backLabel, title, subtitle, rightSlot; shows logo when no backHref, tournament identity when title provided; always includes user menu
 │   ├── bracket-view.tsx       # SVG bracket visualization (pick/predict/view modes)
 │   ├── google-sign-in-button.tsx  # Full-page anchor to /api/auth/google/start (primary variant wraps colored G in white circle for indigo contrast)
-│   ├── back-link.tsx         # Back navigation arrow
 │   ├── error-alert.tsx       # Red error banner
 │   ├── form-field.tsx        # Labeled input wrapper
 │   ├── info-banner.tsx       # Info/warning banner (type: info|warning)
@@ -123,8 +122,7 @@ src/
 │   ├── kick-participant-dialog.tsx  # Accessible kick confirmation modal (ARIA, focus, Escape, click-outside)
 │   ├── participant-avatar.tsx  # Circular avatar with participant initial (indigo theme)
 │   ├── section-header.tsx     # Icon + uppercase label + optional count (text-xxs, used in lobby)
-│   ├── spinner.tsx           # Inline spinner (sm/md/lg)
-│   └── tournament-header.tsx # Sub-header with code/name/back (renders beneath the global AppHeader)
+│   └── spinner.tsx           # Inline spinner (sm/md/lg)
 ├── constants/
 │   ├── auth.ts               # JWT_EXPIRY = "30d"
 │   ├── bracket-layout.ts     # SVG dimensions (BRACKET_BASE_HEIGHT, COLUMN_WIDTH, etc.)

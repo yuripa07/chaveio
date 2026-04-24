@@ -7,7 +7,7 @@ import { usePolling } from "@/hooks/use-polling";
 import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_RESULTS } from "@/constants/tournament";
-import { TournamentHeader } from "@/components/tournament-header";
+import { AppHeader } from "@/components/app-header";
 import { ResultsPageSkeleton } from "@/components/page-spinner";
 import { PulseDot } from "@/components/pulse-dot";
 import { RankingsTable } from "@/components/rankings-table";
@@ -108,15 +108,11 @@ export default function ResultsPage({ params }: { params: Promise<{ code: string
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <TournamentHeader
-        code={code}
-        name={state.tournament.name}
-        backHref={
-          isFinished ? "/" : auth.isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`
-        }
-        backLabel={
-          isFinished ? t.common.home : auth.isCreator ? t.results.setWinnersBack : t.results.myPicksBack
-        }
+      <AppHeader
+        backHref={isFinished ? "/" : auth.isCreator ? `/tournament/${code}/live` : `/tournament/${code}/bracket`}
+        backLabel={isFinished ? t.common.home : auth.isCreator ? t.results.setWinnersBack : t.results.myPicksBack}
+        title={state.tournament.name}
+        subtitle={code}
         rightSlot={statusBadge}
       />
 

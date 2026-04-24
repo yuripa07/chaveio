@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 import { TournamentStatus, MatchStatus, POLL_INTERVAL_BRACKET } from "@/constants/tournament";
 import BracketView from "@/components/bracket-view";
 import { BracketPageSkeleton } from "@/components/page-spinner";
-import { TournamentHeader } from "@/components/tournament-header";
+import { AppHeader } from "@/components/app-header";
 import { Spinner } from "@/components/spinner";
 import {
   DndContext,
@@ -257,11 +257,11 @@ export default function BracketPage({ params }: { params: Promise<{ code: string
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <TournamentHeader
-        code={code}
-        name={state.tournament.name}
+      <AppHeader
         backHref={isLobby ? `/tournament/${code}` : "/"}
         backLabel={isLobby ? t.bracket.waitingRoom : t.common.home}
+        title={state.tournament.name}
+        subtitle={code}
         rightSlot={statusBadge}
       />
 

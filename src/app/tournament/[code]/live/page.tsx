@@ -11,7 +11,7 @@ import { useLocale } from "@/contexts/locale-context";
 import { cn } from "@/lib/cn";
 import { translateApiError } from "@/lib/translate-api-error";
 import { TournamentStatus, RoundStatus, POLL_INTERVAL_LIVE } from "@/constants/tournament";
-import { TournamentHeader } from "@/components/tournament-header";
+import { AppHeader } from "@/components/app-header";
 import { KickParticipantDialog } from "@/components/kick-participant-dialog";
 import { LivePageSkeleton } from "@/components/page-spinner";
 import { InfoBanner } from "@/components/info-banner";
@@ -163,11 +163,11 @@ export default function LivePage({ params }: { params: Promise<{ code: string }>
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <TournamentHeader
-        code={code}
-        name={state.tournament.name}
+      <AppHeader
         backHref="/"
         backLabel={t.common.home}
+        title={state.tournament.name}
+        subtitle={code}
         rightSlot={
           <Link
             href={`/tournament/${code}/results`}

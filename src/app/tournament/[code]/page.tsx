@@ -8,7 +8,7 @@ import { translateApiError } from "@/lib/translate-api-error";
 import { usePolling } from "@/hooks/use-polling";
 import { cn } from "@/lib/cn";
 import { TournamentStatus, POLL_INTERVAL_LOBBY } from "@/constants/tournament";
-import { BackLink } from "@/components/back-link";
+import { AppHeader } from "@/components/app-header";
 import { ErrorAlert } from "@/components/error-alert";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { KickParticipantDialog } from "@/components/kick-participant-dialog";
@@ -186,9 +186,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   if (tournamentMissing) {
     return (
       <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-        <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-          <BackLink href="/" label={t.common.home} />
-        </div>
+        <AppHeader backHref="/" backLabel={t.common.home} />
         <div className="flex flex-1 items-center justify-center p-6">
           <ErrorAlert message={t.landing.tournamentNotFound(code)} />
         </div>
@@ -199,9 +197,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
   if (!token) {
     return (
       <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-        <div className="border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-          <BackLink href="/" label={t.common.home} />
-        </div>
+        <AppHeader backHref="/" backLabel={t.common.home} />
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="w-full max-w-sm space-y-6">
             <div className="text-center">
@@ -244,6 +240,7 @@ export default function TournamentLobby({ params }: { params: Promise<{ code: st
 
   return (
     <main className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+      <AppHeader />
       <div className="flex flex-1 justify-center px-6 py-10">
         <div className="w-full max-w-2xl space-y-6">
           <div className="flex items-start justify-between gap-4">

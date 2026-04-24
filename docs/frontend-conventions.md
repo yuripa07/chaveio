@@ -192,10 +192,8 @@ Reusable components live in `src/components/`. Always check if one exists before
 | `page-spinner.tsx` | Full-page loading: `PageSpinner`, `PageSkeleton`, `LobbyPageSkeleton`, `BracketPageSkeleton`, `LivePageSkeleton`, `ResultsPageSkeleton` — use the page-specific skeleton when the page layout is known |
 | `error-alert.tsx` | Red error banner |
 | `info-banner.tsx` | Info/warning banner |
-| `tournament-header.tsx` | Sticky header with code/name/back |
 | `rankings-table.tsx` | Leaderboard (highlights current user) |
 | `result-icon.tsx` | Correct/incorrect/pending result SVG icons |
-| `back-link.tsx` | Back navigation arrow |
 | `form-field.tsx` | Labeled input wrapper |
 | `score-stat.tsx` | Score display card |
 | `pulse-dot.tsx` | Animated status dot |
@@ -230,11 +228,23 @@ return user ? <SignedInExperience /> : <GoogleSignInButton returnTo={…} />;
 
 For cross-tab sign-out, call `useUser().logout()` — it POSTs `/api/auth/logout` and refreshes the session state.
 
-## 14. Global AppHeader
+## 14. AppHeader (unified, per-page)
 
-`src/components/app-header.tsx` is mounted once in `src/app/layout.tsx` and appears on every screen. It carries the brand on the left and a user dropdown on the right (avatar + theme toggle + locale toggle + sign-out). When the user is signed out, the dropdown slot becomes a compact `GoogleSignInButton` (secondary variant).
+`src/components/app-header.tsx` is a **non-sticky** unified header rendered by each page individually (not in root layout). It accepts:
 
-Individual pages must **not** render their own brand header, `UserChip`, or `LocaleSwitcher` — the global `AppHeader` covers all three. Sub-headers like `TournamentHeader` remain page-owned and render beneath the global header.
+| Prop | Purpose |
+|------|---------|
+| `backHref?` | If set, shows a back chevron instead of the logo |
+| `backLabel?` | Label shown next to the chevron (hidden on mobile) |
+| `title?` | Tournament name displayed as an `<h1>` in the center |
+| `subtitle?` | Tournament code shown above `title` in monospace |
+| `rightSlot?` | Node rendered between title and user menu (status badge, links) |
+
+**Rules:**
+- Pages with a back button (`backHref`) must not also show the logo — the chevron already provides home navigation.
+- Pages without a back button show the Trophy + brand link on the left.
+- The user dropdown (avatar, theme, locale, sign-out) is always present on the right.
+- The user menu dropdown uses `z-50` so it layers above page content.
 
 The lobby at `src/app/tournament/[code]/page.tsx` gates the no-token UI on session state via `useUser()`:
 
