@@ -55,10 +55,12 @@ describe("GET /api/tournaments/[code]/rankings", () => {
     expect(rankings).toHaveLength(2);
     for (const entry of rankings) {
       expect(entry.totalPoints).toBe(0);
-      expect(entry.rank).toBe(1);
       expect(entry.participantId).toBeDefined();
       expect(entry.displayName).toBeDefined();
     }
+    // Sequential ranks even when tied
+    expect(rankings[0].rank).toBe(1);
+    expect(rankings[1].rank).toBe(2);
     // creator can also access
     const res2 = await getRankings(code, creatorToken);
     expect(res2.status).toBe(200);
@@ -95,12 +97,18 @@ describe("GET /api/tournaments/[code]/rankings", () => {
     expect(rankings[1].rank).toBeGreaterThanOrEqual(1);
   });
 
-  it("handles ties correctly — same score shares same rank", async () => {
-    // Both participants start with 0 pts — they should both be rank 1
+  it("handles ties correctly — tied participants get sequential ranks in alphabetical order", async () => {
+    // Both participants start with 0 pts — Alice (creator) and Bob both at 0
     const { code, bobToken } = await setupAndStart();
     const res = await getRankings(code, bobToken);
     const { rankings } = await res.json();
-    expect(rankings.every((e: { rank: number }) => e.rank === 1)).toBe(true);
+    expect(rankings).toHaveLength(2);
+    // Sequential ranks, no shared rank numbers
+    expect(rankings[0].rank).toBe(1);
+    expect(rankings[1].rank).toBe(2);
+    // Alphabetical order within the tie: Alice before Bob
+    expect(rankings[0].displayName).toBe("Alice");
+    expect(rankings[1].displayName).toBe("Bob");
   });
 
   it("returns 403 when participant belongs to a different tournament", async () => {
