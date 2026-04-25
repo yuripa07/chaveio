@@ -7,20 +7,20 @@ export default function HistoryLoading() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex items-center justify-between gap-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-5 py-4 shadow-sm"
+              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-5 py-4 shadow-sm"
             >
-              <div className="flex-1 space-y-2.5">
+              <div className="flex-1 overflow-hidden space-y-2.5">
                 <div className="h-4 w-40 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
                 <div className="flex gap-1.5">
                   <div className="h-5 w-20 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
-                  <div className="h-5 w-24 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+                  <div className="h-5 w-20 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
                 </div>
                 <div className="flex gap-3">
-                  <div className="h-3.5 w-28 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
-                  <div className="h-3.5 w-20 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+                  <div className="h-3.5 w-24 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+                  <div className="h-3.5 w-16 rounded-full bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
                 </div>
               </div>
-              <div className="h-8 w-28 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
+              <div className="h-8 w-36 shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 motion-safe:animate-pulse" />
             </div>
           ))}
         </div>
