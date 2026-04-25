@@ -42,7 +42,7 @@ Empates no ranking sao desempatados por ordem alfabetica (sequential ranking).
 |--------|-----------|
 | Framework | Next.js 16 (App Router) + TypeScript |
 | Estilos | Tailwind CSS 4 |
-| Banco | SQLite (dev) / PostgreSQL via Neon (prod) |
+| Banco | PostgreSQL via Neon (dev e prod) |
 | ORM | Prisma 7 |
 | Auth (sessao) | Google OAuth via `arctic` (PKCE) + JWT em cookie HttpOnly via `jose` |
 | Auth (torneio) | JWT por torneio via `jose` (HS256, 30d) |
@@ -77,7 +77,7 @@ Abra [http://localhost:3000](http://localhost:3000).
 
 | Variavel | Descricao |
 |----------|-----------|
-| `DATABASE_URL` | Connection string do Postgres (ou `file:./dev.db` em SQLite) |
+| `DATABASE_URL` | Connection string do Postgres Neon (use uma branch dedicada para dev) |
 | `JWT_SECRET` | Assinatura dos tokens por torneio |
 | `SESSION_SECRET` | Assinatura do cookie de sessao Google (rotacionavel separado de `JWT_SECRET`) |
 | `GOOGLE_CLIENT_ID` | OAuth client (Google Cloud Console) |
