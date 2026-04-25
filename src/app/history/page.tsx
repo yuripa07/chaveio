@@ -172,7 +172,7 @@ function TournamentCard({
 
       <Link
         href={`/tournament/${entry.code}`}
-        className="self-start shrink-0 flex items-center gap-1 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 active:scale-[.97] transition sm:self-auto"
+        className="flex w-full items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 active:scale-[.97] transition sm:w-auto sm:justify-start sm:shrink-0"
         aria-label={`${t.history.viewTournament}: ${entry.name}`}
       >
         {t.history.viewTournament}
