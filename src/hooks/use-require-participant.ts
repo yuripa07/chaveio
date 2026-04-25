@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTournamentToken } from "@/hooks/use-tournament-token";
+import { useUser } from "@/contexts/user-context";
 import { resolveAuthGuardStatus, AUTH_GUARD_REASON, type AuthGuardStatus } from "@/lib/auth-guard";
 
 type Options = {
@@ -12,6 +13,9 @@ type Options = {
 /**
  * Auth guard for protected pages. Redirects unauthenticated users to the lobby
  * and optionally redirects non-creators to the bracket page.
+ *
+ * Requires both a valid tournament token (localStorage) AND an active user session.
+ * This ensures logout immediately revokes access even when a token still exists.
  *
  * Returns an AuthGuardStatus discriminated union:
  *   { ready: false } — auth not yet confirmed; page should render its skeleton
@@ -25,9 +29,18 @@ export function useRequireParticipant(
 ): AuthGuardStatus {
   const requireCreator = options?.requireCreator ?? false;
   const { token, tokenReady, isCreator, participantId } = useTournamentToken(code);
+  const { user, ready: userReady } = useUser();
   const router = useRouter();
 
-  const status = resolveAuthGuardStatus(tokenReady, token, isCreator, participantId, requireCreator);
+  const status = resolveAuthGuardStatus(
+    tokenReady,
+    userReady,
+    token,
+    user !== null,
+    isCreator,
+    participantId,
+    requireCreator
+  );
 
   const reason = status.ready ? null : status.reason;
 
