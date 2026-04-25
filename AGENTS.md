@@ -14,7 +14,7 @@ March Madness-style bracket prediction app for team bonding events. Participants
 |-------|-----------|
 | Framework | Next.js 16 (App Router) + TypeScript |
 | Styles | Tailwind CSS 4 |
-| Database | SQLite (dev) / PostgreSQL Neon (prod) |
+| Database | PostgreSQL Neon (dev and prod) |
 | ORM | Prisma 7 |
 | Auth | Google OAuth (user session cookie) + JWT per tournament via `jose` (HS256, 30d expiry) |
 | OAuth client | `arctic` (Google provider, PKCE) |
