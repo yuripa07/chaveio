@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { clearAllStoredTokens } from "@/lib/token-storage";
 
 export interface AuthUser {
   id: string;
@@ -57,6 +58,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         credentials: "same-origin",
       });
     } catch {}
+    clearAllStoredTokens();
     setUser(null);
   }, []);
 

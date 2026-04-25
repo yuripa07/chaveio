@@ -30,6 +30,18 @@ export function clearStoredToken(code: string): void {
   } catch {}
 }
 
+export function clearAllStoredTokens(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(KEY_PREFIX)) keys.push(key);
+    }
+    for (const key of keys) localStorage.removeItem(key);
+    notify();
+  } catch {}
+}
+
 export function subscribeStoredToken(callback: () => void): () => void {
   listeners.add(callback);
   const onStorage = (event: StorageEvent) => {
